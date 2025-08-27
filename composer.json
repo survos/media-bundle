@@ -1,0 +1,30 @@
+{
+  "name": "survos/media-bundle",
+  "type": "symfony-bundle",
+  "description": "Manage media without direct relationships",
+  "keywords": ["symfony-ux", "symfony"],
+
+  "license": "MIT",
+  "require": {
+    "php": "^8.4",
+    "symfony/config": "^7.3.2",
+    "symfony/dependency-injection": "^7.3.2",
+    "symfony/http-kernel": "^7.3.2",
+    "twig/twig": "^3.21.1",
+    "doctrine/dbal": "^4.3.2",
+    "doctrine/doctrine-bundle": "^2.15.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "Survos\\MediaBundle\\": "src/"
+    }
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^2.1.22",
+    "symfony/browser-kit": "^7.3.2",
+    "symfony/framework-bundle": "^7.3.2",
+    "symfony/phpunit-bridge": "^7.3.1",
+    "symfony/twig-bundle": "^7.3.2",
+    "symfony/var-dumper": "^7.3.2"
+  }
+}
