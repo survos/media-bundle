@@ -2,7 +2,10 @@
 
 namespace Survos\MediaBundle;
 
+use Survos\BabelBundle\EventSubscriber\BabelLocaleRequestSubscriber;
+use Survos\BabelBundle\Service\StringResolver;
 use Survos\MediaBundle\Provider\ProviderInterface;
+use Survos\MediaBundle\Service\ImageTaggingService;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -51,6 +54,14 @@ class SurvosMediaBundle extends AbstractBundle implements ConfigurationInterface
         // Import services
         $container->import('../config/services.php');
 
+        foreach ([ImageTaggingService::class] as $class) {
+            $builder->register($class)
+                ->setAutowired(true)
+                ->setAutoconfigured(true)
+                ->setPublic(true);
+        }
+
+
         // Set configuration parameters
         $container->parameters()
             ->set('survos_media.config', $config)
@@ -62,7 +73,7 @@ class SurvosMediaBundle extends AbstractBundle implements ConfigurationInterface
             if (!$providerConfig['enabled']) {
                 continue;
             }
-            
+
             $container->parameters()
                 ->set("survos_media.provider.{$name}.config", $providerConfig);
         }
