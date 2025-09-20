@@ -13,11 +13,17 @@ use Survos\MediaBundle\Traits\HasMediaTrait;
 final class MediaPostLoadListener
 {
     public function __construct(
-        private readonly MediaRepository $mediaRepository
-    ) {}
+//        private readonly ?MediaRepository $mediaRepository=null
+    ) {
+
+    }
 
     public function postLoad(PostLoadEventArgs $args): void
     {
+        return;
+        if (!$this->mediaRepository) {
+            return;
+        }
         $entity = $args->getObject();
 
         if (!$this->usesHasMediaTrait($entity)) {
@@ -54,7 +60,7 @@ final class MediaPostLoadListener
 
     private function usesHasMediaTrait($entity): bool
     {
-        $traits = class_uses_recursive($entity::class);
+        $traits = class_uses($entity::class);
         return in_array(HasMediaTrait::class, $traits);
     }
 }

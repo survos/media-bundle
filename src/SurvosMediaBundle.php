@@ -8,17 +8,44 @@ use Survos\MediaBundle\Provider\ProviderInterface;
 use Survos\MediaBundle\Service\ImageTaggingService;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
+use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
-class SurvosMediaBundle extends AbstractBundle implements ConfigurationInterface
+class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterface
 {
-    public function getConfigTreeBuilder(): TreeBuilder
-    {
-        $treeBuilder = new TreeBuilder('survos_media');
+//    public function getConfigTreeBuilder(): TreeBuilder
+//    {
+//        $treeBuilder = new TreeBuilder('survos_media');
+//
+//        $treeBuilder->getRootNode()
+//            ->children()
+//                ->scalarNode('default_locale')->defaultValue('en')->end()
+//                ->scalarNode('cache_ttl')->defaultValue(3600)->end()
+//                ->booleanNode('sais_integration')->defaultTrue()->end()
+//                ->arrayNode('providers')
+//                    ->useAttributeAsKey('name')
+//                    ->arrayPrototype()
+//                        ->children()
+//                            ->booleanNode('enabled')->defaultTrue()->end()
+//                            ->scalarNode('api_key')->end()
+//                            ->scalarNode('api_secret')->end()
+//                            ->scalarNode('access_token')->end()
+//                            ->arrayNode('options')
+//                                ->variablePrototype()->end()
+//                            ->end()
+//                        ->end()
+//                    ->end()
+//                ->end()
+//            ->end();
+//
+//        return $treeBuilder;
+//    }
 
-        $treeBuilder->getRootNode()
+    public function configure(DefinitionConfigurator $definition): void
+    {
+        $definition->rootNode()
             ->children()
                 ->scalarNode('default_locale')->defaultValue('en')->end()
                 ->scalarNode('cache_ttl')->defaultValue(3600)->end()
@@ -38,16 +65,8 @@ class SurvosMediaBundle extends AbstractBundle implements ConfigurationInterface
                     ->end()
                 ->end()
             ->end();
-
-        return $treeBuilder;
     }
 
-    public function configure(ContainerBuilder $container): void
-    {
-        // Auto-tag providers
-        $container->registerForAutoconfiguration(ProviderInterface::class)
-            ->addTag('survos_media.provider');
-    }
 
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
