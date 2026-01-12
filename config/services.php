@@ -8,6 +8,7 @@ use Survos\MediaBundle\Command\SyncMediaCommand;
 use Survos\MediaBundle\EventListener\MediaPostLoadListener;
 use Survos\MediaBundle\Provider\YouTubeProvider;
 use Survos\MediaBundle\Provider\FlickrProvider;
+use Survos\MediaBundle\Service\MediaKeyService;
 use Survos\MediaBundle\Service\MediaManager;
 
 return static function (ContainerConfigurator $container): void {
@@ -41,6 +42,7 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$config', param('survos_media.provider.flickr.config'));
 
     // Commands
+    $services->set(MediaKeyService::class);
     $services->set(FetchYouTubeCommand::class);
     $services->set(FetchFlickrCommand::class);
     $services->set(SyncMediaCommand::class);
