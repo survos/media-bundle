@@ -14,12 +14,19 @@ class MediaManager
     /** @var ProviderInterface[] */
     private array $providers = [];
 
+    private MediaRepository $mediaRepository;
+
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly MediaRepository $mediaRepository,
         private readonly CacheInterface $cache,
         private readonly int $cacheTtl = 3600
-    ) {}
+    ) {
+        $repo = $this->em->getRepository(BaseMedia::class);
+        if (!$repo instanceof MediaRepository) {
+            throw new \RuntimeException('Expected MediaRepository for BaseMedia.');
+        }
+        $this->mediaRepository = $repo;
+    }
 
     public function addProvider(ProviderInterface $provider): void
     {

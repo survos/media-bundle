@@ -8,7 +8,6 @@ use Survos\MediaBundle\Command\SyncMediaCommand;
 use Survos\MediaBundle\EventListener\MediaPostLoadListener;
 use Survos\MediaBundle\Provider\YouTubeProvider;
 use Survos\MediaBundle\Provider\FlickrProvider;
-use Survos\MediaBundle\Repository\MediaRepository;
 use Survos\MediaBundle\Service\MediaManager;
 
 return static function (ContainerConfigurator $container): void {
@@ -17,13 +16,18 @@ return static function (ContainerConfigurator $container): void {
         ->autowire()
         ->autoconfigure();
 
-    // Repository
-    $services->set(MediaRepository::class)
-        ->tag('doctrine.repository_service');
+    // Services
+     $services->set(MediaManager::class)
+         ->public()
+         ->arg('$cacheTtl', param('survos_media.cache_ttl'));
 
-    // Service
-    $services->set(MediaManager::class)
-        ->arg('$cacheTtl', param('survos_media.cache_ttl'));
+      $services->set(\Survos\MediaBundle\Service\MediaUrlGenerator::class)
+          ->arg('$presets', param('survos_media.presets'))
+          ->arg('$imgproxyBaseUrl', param('survos_media.imgproxy_base_url'))
+          ->arg('$imgproxyKey', param('survos_media.imgproxy.key'))
+          ->arg('$imgproxySalt', param('survos_media.imgproxy.salt'))
+          ->arg('$mediaServerHost', param('survos_media.media_server.host'))
+          ->arg('$mediaServerResizePath', param('survos_media.media_server.resize_path'));
 
     // Event Listener
     $services->set(MediaPostLoadListener::class)

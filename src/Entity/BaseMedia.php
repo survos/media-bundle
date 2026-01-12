@@ -18,17 +18,16 @@ abstract class BaseMedia
 {
 
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    public readonly ?int $id;
+    #[ORM\Column(length: 255)]
+    public string $id;
 
     #[ORM\Column(length: 255, unique: true)]
     public string $code;
 
-    #[ORM\Column(length: 100)]
+    #[ORM\Column(length: 100, nullable: true)]
     public ?string $provider;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable: true)]
     public ?string $externalId;
 
     #[ORM\Column(type: 'text', nullable: true)]
@@ -76,35 +75,13 @@ abstract class BaseMedia
     #[ORM\Column(type: 'text', nullable: true)]
     public ?string $description;
 
-    public function __construct(string $code = null, string $provider = null, string $externalId = null)
+    public function __construct(string $id, ?string $code = null, ?string $provider = null, ?string $externalId = null)
     {
+        $this->id = $id;
         $this->code = $code ?? uniqid();
         $this->provider = $provider;
         $this->externalId = $externalId;
         $this->createdAt = new \DateTimeImmutable();
-    }
-
-    // SurvosSaisBundle integration
-    public function getThumbnailUrl(?int $width = null, ?int $height = null): ?string
-    {
-        if (!$this->thumbnailUrl) {
-            return null;
-        }
-
-        if ($width || $height) {
-            return $this->generateSaisUrl($this->thumbnailUrl, $width, $height);
-        }
-
-        return $this->thumbnailUrl;
-    }
-
-    private function generateSaisUrl(string $originalUrl, ?int $width, ?int $height): string
-    {
-        $params = array_filter(['w' => $width, 'h' => $height]);
-        return sprintf('/media/resize/%s?%s', 
-            base64_encode($originalUrl), 
-            http_build_query($params)
-        );
     }
 
     abstract public function getType(): string;
