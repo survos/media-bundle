@@ -34,8 +34,9 @@ final class MediaExtension extends AbstractExtension
 
     public function mediaResize(
         string|object $media,
-        string $preset
+        string $preset,
+        ?string $client=null
     ): string {
-        return $this->urlGenerator->resize($media, $preset);
+        return $this->urlGenerator->resize($media, $preset, client: $client);
     }
 }

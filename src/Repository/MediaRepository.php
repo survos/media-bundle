@@ -3,16 +3,12 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Repository;
 
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\ORM\EntityRepository;
+use Survos\MediaBundle\Dto\BatchDispatchResult;
 use Survos\MediaBundle\Entity\BaseMedia;
 
-final class MediaRepository extends ServiceEntityRepository
+final class MediaRepository extends EntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
-    {
-        parent::__construct($registry, BaseMedia::class);
-    }
 
     public function findByCode(string $code): ?BaseMedia
     {
@@ -33,5 +29,28 @@ final class MediaRepository extends ServiceEntityRepository
             ->setParameter('codes', $codes)
             ->getQuery()
             ->getResult();
+    }
+
+    public function iterateOriginalUrls(): iterable
+    {
+        $qb = $this->createQueryBuilder('m')
+            ->select('m.externalUrl');
+
+        foreach ($qb->getQuery()->toIterable() as $row) {
+            yield $row['externalUrl'];
+        }
+    }
+
+    public function upsertFromBatchResult(BatchDispatchResult $result): void
+    {
+        foreach ($result->media as $registration) {
+            $media = $this->find($registration->mediaKey);
+            assert($media, "Missing $registration->mediaKey");
+            if (!$media) {
+                continue;
+            }
+            $media->status = $registration->status;
+        }
+        $this->getEntityManager()->flush();
     }
 }

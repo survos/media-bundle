@@ -54,7 +54,7 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
                   ->arrayNode('imgproxy')
                       ->addDefaultsIfNotSet()
                       ->children()
-                          ->scalarNode('base_url')->defaultValue('https://images.survos.com')->end()
+                          ->scalarNode('base_url')->defaultValue('https://imgproxy.survos.com')->end()
                           ->scalarNode('key')->defaultValue('%env(IMGPROXY_KEY)%')->end()
                           ->scalarNode('salt')->defaultValue('%env(IMGPROXY_SALT)%')->end()
                       ->end()

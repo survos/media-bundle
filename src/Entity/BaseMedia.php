@@ -18,11 +18,12 @@ abstract class BaseMedia
 {
 
     #[ORM\Id]
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 32)]
+    // this is the xxh3 of the url
     public string $id;
 
-    #[ORM\Column(length: 255, unique: true)]
-    public string $code;
+    #[ORM\Column(length: 255)]
+    public string $status;
 
     #[ORM\Column(length: 100, nullable: true)]
     public ?string $provider;
@@ -78,7 +79,8 @@ abstract class BaseMedia
     public function __construct(string $id, ?string $code = null, ?string $provider = null, ?string $externalId = null)
     {
         $this->id = $id;
-        $this->code = $code ?? uniqid();
+        $this->status = 'new'; // until the AssetWorkflow Constants are shared.
+//        $this->code = $code ?? uniqid();
         $this->provider = $provider;
         $this->externalId = $externalId;
         $this->createdAt = new \DateTimeImmutable();

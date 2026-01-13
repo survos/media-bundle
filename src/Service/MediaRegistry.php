@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use Survos\MediaBundle\Entity\BaseMedia;
 use Survos\MediaBundle\Entity\Photo;
+use Survos\MediaBundle\Util\MediaIdentity;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use SplFileInfo;
 use function is_string;
@@ -38,12 +39,12 @@ final class MediaRegistry
             }
 
             $repository = $this->entityManager->getRepository(BaseMedia::class);
-            $existing = $repository->findOneBy(['externalUrl' => $url]);
+            $id = MediaIdentity::idFromOriginalUrl($url);
+            $existing = $repository->find($id);
             if ($existing instanceof BaseMedia) {
                 return $existing;
             }
 
-            $id = self::idFromUrl($url);
             /** @var BaseMedia $media */
             $media = new $class($id);
             $media->externalUrl = $url;
@@ -63,7 +64,7 @@ final class MediaRegistry
             }
 
             $pseudoUrl = 'local://' . $source->getBasename();
-            $id = self::idFromUrl($pseudoUrl);
+            $id = MediaIdentity::idFromOriginalUrl($pseudoUrl);
 
             /** @var BaseMedia $media */
             $media = new $class($id);
@@ -82,10 +83,5 @@ final class MediaRegistry
         throw new InvalidArgumentException('Unsupported media source type.');
     }
 
-    public static function idFromUrl(string $url): string
-    {
-        $b64 = base64_encode($url);
-        $b64 = rtrim(strtr($b64, '+/', '-_'), '=');
-        return $b64;
-    }
+
 }

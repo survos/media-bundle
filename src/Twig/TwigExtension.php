@@ -6,10 +6,11 @@ use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 
+use Survos\MediaBundle\Service\MediaUrlGenerator;
+
 class TwigExtension extends AbstractExtension
 {
-
-    public function __construct(private array $config) {
+    public function __construct() {
     }
 
     public function getFilters(): array
@@ -24,7 +25,11 @@ class TwigExtension extends AbstractExtension
     public function getFunctions(): array
     {
         return [
-//            new TwigFunction('function_name', [::class, 'doSomething']),
+            new TwigFunction('media_presets', fn() => MediaUrlGenerator::PRESETS),
+            new TwigFunction('media_preset', fn(string $name) => MediaUrlGenerator::PRESETS[$name] ?? null),
+            new TwigFunction('media_preset_small', fn() => MediaUrlGenerator::PRESET_SMALL),
+            new TwigFunction('media_preset_medium', fn() => MediaUrlGenerator::PRESET_MEDIUM),
+            new TwigFunction('media_preset_large', fn() => MediaUrlGenerator::PRESET_LARGE),
         ];
     }
 }

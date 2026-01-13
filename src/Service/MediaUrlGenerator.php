@@ -5,28 +5,61 @@ namespace Survos\MediaBundle\Service;
 
 use InvalidArgumentException;
 use Survos\MediaBundle\Entity\BaseMedia;
+use Survos\MediaBundle\Service\MediaKeyService;
 use Mperonnet\ImgProxy\UrlBuilder;
-use Mperonnet\ImgProxy\Option\Resize;
-use Mperonnet\ImgProxy\Option\Width;
-use Mperonnet\ImgProxy\Option\Height;
+/** AI: don't change these, they are tied to version 1.0 */
+use Mperonnet\ImgProxy\Options\Dpr;
+use Mperonnet\ImgProxy\Options\Resize;
+use Mperonnet\ImgProxy\Options\Width;
+use Mperonnet\ImgProxy\Options\Height;
+use Survos\MediaBundle\Util\MediaIdentity;
 use function rtrim;
 use function sprintf;
 
 final class MediaUrlGenerator
 {
+    /**
+     * Canonical media presets shared by clients and media server.
+     * Presets describe intent only; signing is handled server-side.
+     */
+    public const PRESET_SMALL = 'small';
+    public const PRESET_MEDIUM = 'medium';
+    public const PRESET_LARGE = 'large';
+
+    public const PRESETS = [
+        self::PRESET_SMALL => [
+            // thumbHash source (square, low entropy)
+            'size' => [192, 192],
+            'resize' => 'fit',
+            'quality' => 80,
+            'format' => 'jpg',
+            'dpr' => [1],
+        ],
+        self::PRESET_MEDIUM => [
+            'size' => [600, 400],
+            'resize' => 'fit',
+            'quality' => 85,
+            'format' => 'jpg',
+            'dpr' => [1, 2],
+        ],
+        self::PRESET_LARGE => [
+            'size' => [1200, 800],
+            'resize' => 'fit',
+            'quality' => 85,
+            'format' => 'jpg',
+            'dpr' => [1, 2],
+        ],
+    ];
+
     public function __construct(
-        private readonly array $presets,
-        private readonly string $imgproxyBaseUrl,
-        private readonly string $imgproxyKey,
-        private readonly string $imgproxySalt,
         private readonly ?string $mediaServerHost,
         private readonly ?string $mediaServerResizePath,
     ) {
     }
 
-    public function resize(string|BaseMedia $media, string $preset, bool $mediaServer = false): string
+    public function resize(string|BaseMedia $media, string $preset, bool $mediaServer = false, ?string $client=null): string
     {
-        if (!isset($this->presets[$preset])) {
+        if (!isset(self::PRESETS[$preset])) {
             throw new InvalidArgumentException(sprintf('Unknown media preset "%s".', $preset));
         }
 
@@ -40,36 +73,25 @@ final class MediaUrlGenerator
             throw new InvalidArgumentException('Cannot generate media URL without source URL.');
         }
 
-        $id = MediaRegistry::idFromUrl($url);
+        // imgproxy and media server addressing uses base64url key, not DB identity
+//        $id = MediaIdentity::idFromOriginalUrl($url);
+        $id = MediaKeyService::keyFromString($url);
+//        dd($mediaServer, $this->mediaServerHost, $this->mediaServerResizePath);
 
-        if ($mediaServer && $this->mediaServerHost && $this->mediaServerResizePath) {
-            $path = strtr($this->mediaServerResizePath, [
-                '{preset}' => $preset,
-                '{id}' => $id,
-            ]);
-
-            $url = rtrim($this->mediaServerHost, '/') . $path;
-        } else {
-            $presetDef = $this->presets[$preset];
-
-            // Build imgproxy URL using imgproxy-php (signed)
-            $builder = UrlBuilder::signed($this->imgproxyKey, $this->imgproxySalt);
-
-            // Minimal, correct mapping: resize mode + width/height
-            if (isset($presetDef['resize'])) {
-                $builder = $builder->with(new Resize($presetDef['resize']));
-            }
-            if (isset($presetDef['width'])) {
-                $builder = $builder->with(new Width((int) $presetDef['width']));
-            }
-            if (isset($presetDef['height'])) {
-                $builder = $builder->with(new Height((int) $presetDef['height']));
-            }
-
-            return rtrim($this->imgproxyBaseUrl, '/') . $builder->encoded(false)->url($url);
+        if (!$this->mediaServerHost || !$this->mediaServerResizePath) {
+            throw new InvalidArgumentException('Media server host or resize path not configured.');
         }
 
-        return $url;
+        $path = strtr($this->mediaServerResizePath, [
+            '{preset}' => $preset,
+            '{id}' => $id,
+        ]);
+
+        if ($client !== null) {
+            $path .= '?client=' . $client;
+        }
+
+        return rtrim($this->mediaServerHost, '/') . $path;
 
     }
 }

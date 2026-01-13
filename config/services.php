@@ -4,10 +4,12 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use Survos\MediaBundle\Command\FetchYouTubeCommand;
 use Survos\MediaBundle\Command\FetchFlickrCommand;
+use Survos\MediaBundle\Command\FetchMediaCommand;
 use Survos\MediaBundle\Command\SyncMediaCommand;
 use Survos\MediaBundle\EventListener\MediaPostLoadListener;
 use Survos\MediaBundle\Provider\YouTubeProvider;
 use Survos\MediaBundle\Provider\FlickrProvider;
+use Survos\MediaBundle\Service\MediaBatchDispatcher;
 use Survos\MediaBundle\Service\MediaKeyService;
 use Survos\MediaBundle\Service\MediaManager;
 
@@ -23,10 +25,6 @@ return static function (ContainerConfigurator $container): void {
          ->arg('$cacheTtl', param('survos_media.cache_ttl'));
 
       $services->set(\Survos\MediaBundle\Service\MediaUrlGenerator::class)
-          ->arg('$presets', param('survos_media.presets'))
-          ->arg('$imgproxyBaseUrl', param('survos_media.imgproxy_base_url'))
-          ->arg('$imgproxyKey', param('survos_media.imgproxy.key'))
-          ->arg('$imgproxySalt', param('survos_media.imgproxy.salt'))
           ->arg('$mediaServerHost', param('survos_media.media_server.host'))
           ->arg('$mediaServerResizePath', param('survos_media.media_server.resize_path'));
 
@@ -45,5 +43,7 @@ return static function (ContainerConfigurator $container): void {
     $services->set(MediaKeyService::class);
     $services->set(FetchYouTubeCommand::class);
     $services->set(FetchFlickrCommand::class);
+    $services->set(FetchMediaCommand::class);
     $services->set(SyncMediaCommand::class);
+    $services->set(MediaBatchDispatcher::class);
 };
