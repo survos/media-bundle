@@ -82,6 +82,11 @@ final class MediaRegistry
 
         throw new InvalidArgumentException('Unsupported media source type.');
     }
+    
+    public function flush(): void
+    {
+        $this->entityManager->flush();
+    }
 
 
 }
