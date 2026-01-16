@@ -24,7 +24,7 @@ final class MediaRegistry
     public function ensureMedia(
         string|UploadedFile|SplFileInfo $source,
         ?string $class = null,
-        bool $flush = true
+        bool $flush = false
     ): BaseMedia {
         $class ??= Photo::class;
 
@@ -82,7 +82,7 @@ final class MediaRegistry
 
         throw new InvalidArgumentException('Unsupported media source type.');
     }
-    
+
     public function flush(): void
     {
         $this->entityManager->flush();

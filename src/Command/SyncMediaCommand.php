@@ -3,10 +3,12 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Command;
 
+use App\Service\AssetRegistry;
 use Doctrine\ORM\EntityManagerInterface;
 use Survos\MediaBundle\Entity\BaseMedia;
 use Survos\MediaBundle\Service\MediaBatchDispatcher;
 use Survos\MediaBundle\Repository\MediaRepository;
+use Survos\MediaBundle\Service\MediaRegistry;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
@@ -20,7 +22,8 @@ final class SyncMediaCommand
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly MediaBatchDispatcher $dispatcher,
+        private readonly MediaBatchDispatcher   $dispatcher,
+        private MediaRegistry $mediaRegistry,
     ) {
     }
 
@@ -41,6 +44,8 @@ final class SyncMediaCommand
 
         if ($url !== null) {
             $io->info('Syncing single URL');
+            // persist it so we can save the response.
+            $this->mediaRegistry->ensureMedia($url, flush: true);
             $result = $this->dispatcher->dispatch($client, [$url]);
             $repo->upsertFromBatchResult($result);
             $this->entityManager->flush();
@@ -58,22 +63,27 @@ final class SyncMediaCommand
         foreach ($urls as $originalUrl) {
             $batch[] = $originalUrl;
             if (\count($batch) >= $batchSize) {
-                $result = $this->dispatcher->dispatch($client, $batch);
-                $repo->upsertFromBatchResult($result);
-                $this->entityManager->flush();
-                $total += \count($batch);
+                $total = $this->dispatch($client, $batch, $repo, $total);
                 $batch = [];
             }
         }
 
+        // if there's any left
         if ($batch !== []) {
-            $result = $this->dispatcher->dispatch($client, $batch);
-            $repo->upsertFromBatchResult($result);
-            $this->entityManager->flush();
-            $total += \count($batch);
+            $total = $this->dispatch($client, $batch, $repo, $total);
         }
 
         $io->success(sprintf('Synced %d media URLs', $total));
         return Command::SUCCESS;
+    }
+
+    private function dispatch(string $client, array $batch, MediaRepository $repo, int $total): int
+    {
+        $result = $this->dispatcher->dispatch($client, $batch);
+        $repo->upsertFromBatchResult($result);
+        $this->entityManager->flush();
+        $total += \count($batch);
+        return $total;
+
     }
 }

@@ -49,7 +49,14 @@ final class MediaRepository extends EntityRepository
             if (!$media) {
                 continue;
             }
+            // ugh, this is what Mapper is for!!
             $media->status = $registration->status;
+            $media->smallUrl = $registration->smallUrl;
+            $media->s3Url = $registration->s3Url;
+            $media->storageKey = $registration->storageKey;
+
+//            ($media->status === 'downloaded') &&
+            dump($registration);
         }
         $this->getEntityManager()->flush();
     }

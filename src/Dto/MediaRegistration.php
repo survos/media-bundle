@@ -9,6 +9,9 @@ final class MediaRegistration
         public readonly string $originalUrl,
         public readonly string $mediaKey,
         public readonly string $status,
+        public readonly ?string $storageKey,
+        public readonly ?string $s3Url,
+        public readonly ?string $smallUrl,
     ) {
     }
 
@@ -18,6 +21,9 @@ final class MediaRegistration
             $row['originalUrl'],
             $row['mediaKey'],
             $row['status'],
+            $row['storageKey'],
+            $row['s3Url']?:null,
+            $row['smallUrl']?:null,
         );
     }
 }

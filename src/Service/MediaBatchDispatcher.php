@@ -12,7 +12,7 @@ final class MediaBatchDispatcher
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        #[Autowire('%env(SAIS_API_ENDPOINT)%')] private readonly string $mediaServerBaseUrl,
+        #[Autowire('%env(MEDIARY_ENDPOINT)%')] private readonly string $mediaServerBaseUrl,
     ) {
     }
 
