@@ -31,10 +31,19 @@ final class MediaRepository extends EntityRepository
             ->getResult();
     }
 
-    public function iterateOriginalUrls(): iterable
+    public function iterateOriginalUrlsByStatus(?string $status = null, ?int $limit = null): iterable
     {
         $qb = $this->createQueryBuilder('m')
             ->select('m.externalUrl');
+
+        if ($status !== null) {
+            $qb->andWhere('m.status = :status')
+               ->setParameter('status', $status);
+        }
+
+        if ($limit !== null) {
+            $qb->setMaxResults($limit);
+        }
 
         foreach ($qb->getQuery()->toIterable() as $row) {
             yield $row['externalUrl'];
@@ -54,9 +63,6 @@ final class MediaRepository extends EntityRepository
             $media->smallUrl = $registration->smallUrl;
             $media->s3Url = $registration->s3Url;
             $media->storageKey = $registration->storageKey;
-
-//            ($media->status === 'downloaded') &&
-            dump($registration);
         }
         $this->getEntityManager()->flush();
     }

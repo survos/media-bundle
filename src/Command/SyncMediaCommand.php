@@ -35,6 +35,12 @@ final class SyncMediaCommand
 
         #[Option('Batch size')]
         int $batchSize = 100,
+
+        #[Option('Sync all media regardless of status')]
+        bool $all = false,
+
+        #[Option('Limit total number of media to sync')]
+        ?int $limit = null,
     ): int {
         /** @var MediaRepository $repo */
         $repo = $this->entityManager->getRepository(BaseMedia::class);
@@ -56,7 +62,8 @@ final class SyncMediaCommand
 
         $io->info('Syncing all local media');
 
-        $urls = $repo->iterateOriginalUrls();
+        $statusFilter = $all ? null : 'new';
+        $urls = $repo->iterateOriginalUrlsByStatus($statusFilter, $limit);
         $batch = [];
         $total = 0;
 
