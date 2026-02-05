@@ -6,6 +6,7 @@ use Survos\MediaBundle\Command\FetchYouTubeCommand;
 use Survos\MediaBundle\Command\FetchFlickrCommand;
 use Survos\MediaBundle\Command\FetchMediaCommand;
 use Survos\MediaBundle\Command\SyncMediaCommand;
+use Survos\MediaBundle\Command\MediaStatsCommand;
 use Survos\MediaBundle\EventListener\MediaPostLoadListener;
 use Survos\MediaBundle\Provider\YouTubeProvider;
 use Survos\MediaBundle\Provider\FlickrProvider;
@@ -45,5 +46,7 @@ return static function (ContainerConfigurator $container): void {
     $services->set(FetchFlickrCommand::class);
     $services->set(FetchMediaCommand::class);
     $services->set(SyncMediaCommand::class);
+    $services->set(MediaStatsCommand::class)
+        ->tag('console.command');
     $services->set(MediaBatchDispatcher::class);
 };
