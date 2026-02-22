@@ -16,13 +16,17 @@ final class MediaBatchDispatcher
     ) {
     }
 
-    public function dispatch(string $client, array $urls): BatchDispatchResult
+    /**
+     * @param array $extra Additional top-level payload keys forwarded to mediary,
+     *                     e.g. ['context' => [...], 'callback_url' => 'https://...'].
+     */
+    public function dispatch(string $client, array $urls, array $extra = []): BatchDispatchResult
     {
         $options = [
-            'json' => [
-                'urls' => $urls,
+            'json' => array_merge([
+                'urls'     => $urls,
                 'dispatch' => true,
-            ],
+            ], $extra),
         ];
 
         if (str_contains($this->mediaServerBaseUrl, '.wip')) {
