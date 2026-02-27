@@ -71,6 +71,42 @@ Local files are assigned a temporary `local://` URL until synced.
 
 ---
 
+## Probing Mediary (Polling Fallback)
+
+When webhook callbacks are unavailable (for example, local dev tunnels are down), poll mediary directly via the bundle service.
+
+```php
+use Survos\MediaBundle\Service\MediaBatchDispatcher;
+
+$result = $mediaBatchDispatcher->dispatch('museum', [$url], [
+    'callback_url' => 'https://my-app.example/webhook/media',
+]);
+
+$assetId = $result->media[0]->mediaKey;
+$probe = $mediaBatchDispatcher->probe($assetId);
+
+if ($probe->isComplete()) {
+    // use $probe->meta / $probe->context / $probe->ocr / $probe->ai
+}
+```
+
+Available methods:
+
+- `probe(string $assetId): MediaProbeResult` → calls `GET /fetch/media/{id}`
+- `probeMany(array $assetIds): array<MediaProbeResult>` → calls `POST /fetch/media/by-ids`
+
+Probe payload includes current workflow state (`marking`), variants/thumb URLs, metadata, and any OCR/AI context that has been written so far.
+
+CLI helper:
+
+```bash
+bin/console media:probe 5c4e0c2d6f8a1b9e
+bin/console media:probe "https://example.org/image.jpg"
+bin/console media:probe --url "upload://sha256/abcd..."
+```
+
+---
+
 ## What This Bundle Does *Not* Do
 
 - Download media
