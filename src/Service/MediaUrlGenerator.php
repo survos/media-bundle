@@ -64,19 +64,19 @@ final class MediaUrlGenerator
         }
 
         if ($media instanceof BaseMedia) {
-            $url = $media->archiveUrl ?? $media->externalUrl;
+            // Return pre-computed smallUrl directly when available
+            if ($preset === self::PRESET_SMALL && $media->smallUrl) {
+                return $media->smallUrl;
+            }
+            // Use the hex id for the mediary resize endpoint
+            $id = $media->id;
         } else {
-            $url = $media;
+            // Raw URL string — derive base64url key for mediary addressing
+            if (!$media) {
+                throw new InvalidArgumentException('Cannot generate media URL without source URL.');
+            }
+            $id = MediaKeyService::keyFromString($media);
         }
-
-        if (!$url) {
-            throw new InvalidArgumentException('Cannot generate media URL without source URL.');
-        }
-
-        // imgproxy and media server addressing uses base64url key, not DB identity
-//        $id = MediaIdentity::idFromOriginalUrl($url);
-        $id = MediaKeyService::keyFromString($url);
-//        dd($mediaServer, $this->mediaServerHost, $this->mediaServerResizePath);
 
         if (!$this->mediaServerHost || !$this->mediaServerResizePath) {
             throw new InvalidArgumentException('Media server host or resize path not configured.');
