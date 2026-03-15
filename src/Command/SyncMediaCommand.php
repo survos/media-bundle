@@ -44,6 +44,9 @@ final class SyncMediaCommand
 
         #[Option('Process download synchronously (skip async queue) — useful for testing')]
         bool $sync = false,
+
+        #[Option('Upload only — fire-and-forget, skip reading status back from mediary. Much faster for large initial imports.')]
+        bool $uploadOnly = false,
     ): int {
         /** @var MediaRepository $repo */
         $repo   = $this->entityManager->getRepository(BaseMedia::class);
@@ -55,40 +58,70 @@ final class SyncMediaCommand
             $this->mediaRegistry->ensureMedia($url, flush: true);
             $extra = $sync ? ['sync' => true] : [];
             $result = $this->dispatcher->dispatch($client, [$url], $extra);
-            $repo->upsertFromBatchResult($result);
-            $this->entityManager->flush();
-            $io->success('URL synced');
+            if (!$uploadOnly) {
+                $repo->upsertFromBatchResult($result);
+                $this->entityManager->flush();
+            }
+            $io->success('URL dispatched' . ($uploadOnly ? ' (upload-only, no status readback)' : ' and synced'));
             return Command::SUCCESS;
         }
 
         $statusFilter = $all ? null : 'new';
-        $batch        = [];   // [url => sourceMetaArray]
-        $total        = 0;
+
+        // Count total for progress bar
+        $totalCount = $repo->countUrlsWithContext($statusFilter, $limit);
+        $io->note(sprintf('Media to sync: %d (upload-only: %s)', $totalCount, $uploadOnly ? 'yes' : 'no'));
+
+        if ($totalCount === 0) {
+            $io->success('Nothing to sync.');
+            return Command::SUCCESS;
+        }
+
+        $progress = $io->createProgressBar($totalCount);
+        $progress->setFormat(' %current%/%max% [%bar%] %percent:3s%% %elapsed:6s% — %message%');
+        $progress->setMessage('starting...');
+        $progress->start();
+
+        $batch = [];   // [url => sourceMetaArray]
+        $total = 0;
 
         foreach ($repo->iterateUrlsWithContext($statusFilter, $limit) as $url => $rawData) {
             $batch[$url] = $rawData;
             if (count($batch) >= $batchSize) {
-                $total = $this->dispatchBatch($client, $batch, $repo, $total, $io, $sync);
+                $total = $this->dispatchBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $progress);
                 $batch = [];
             }
         }
         if ($batch !== []) {
-            $total = $this->dispatchBatch($client, $batch, $repo, $total, $io, $sync);
+            $total = $this->dispatchBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $progress);
         }
 
-        $io->success(sprintf('Synced %d media URLs', $total));
+        $progress->finish();
+        $io->newLine(2);
+        $io->success(sprintf('Dispatched %d media URLs%s',
+            $total,
+            $uploadOnly ? ' (upload-only — mediary will process asynchronously)' : ''
+        ));
         return Command::SUCCESS;
     }
 
     /** @param array<string, array> $batch  url => sourceMetaArray */
-    private function dispatchBatch(string $client, array $batch, MediaRepository $repo, int $total, SymfonyStyle $io, bool $sync = false): int
-    {
+    private function dispatchBatch(
+        string $client,
+        array $batch,
+        MediaRepository $repo,
+        int $total,
+        SymfonyStyle $io,
+        bool $sync,
+        bool $uploadOnly,
+        mixed $progress,
+    ): int {
         $urls       = array_keys($batch);
         $contextMap = array_filter($batch, static fn($ctx) => $ctx !== []);
 
-        if ($io->isVerbose()) {
-            foreach ($urls as $url) {
-                $io->writeln(sprintf('  → %s', $url));
+        if ($io->isVeryVerbose()) {
+            foreach ($urls as $u) {
+                $io->writeln(sprintf('  → %s', $u));
             }
         }
 
@@ -96,9 +129,18 @@ final class SyncMediaCommand
         if ($sync) {
             $extra['sync'] = true;
         }
+
         $result = $this->dispatcher->dispatch($client, $urls, $extra);
-        $repo->upsertFromBatchResult($result);
-        $this->entityManager->flush();
-        return $total + count($urls);
+
+        if (!$uploadOnly) {
+            $repo->upsertFromBatchResult($result);
+            $this->entityManager->flush();
+        }
+
+        $done = $total + count($urls);
+        $progress->setMessage(sprintf('%d dispatched', $done));
+        $progress->advance(count($urls));
+
+        return $done;
     }
 }

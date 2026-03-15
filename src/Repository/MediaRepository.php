@@ -51,6 +51,24 @@ final class MediaRepository extends EntityRepository
     }
 
     /**
+     * Count URLs for progress bar display before iterating.
+     */
+    public function countUrlsWithContext(?string $status = null, ?int $limit = null): int
+    {
+        $qb = $this->createQueryBuilder('m')
+            ->select('COUNT(m.externalUrl)');
+
+        if ($status !== null) {
+            $qb->andWhere('m.status = :status')
+               ->setParameter('status', $status);
+        }
+
+        $count = (int) $qb->getQuery()->getSingleScalarResult();
+
+        return $limit !== null ? min($count, $limit) : $count;
+    }
+
+    /**
      * Iterate [url => rawData] pairs for building context maps on dispatch.
      * @return iterable<string, array>
      */
