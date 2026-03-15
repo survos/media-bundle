@@ -34,7 +34,10 @@ final class MediaBatchDispatcher
             $options['proxy'] = 'http://127.0.0.1:7080';
         }
 
-        // we need a better way to define the endpoint!
+        // Sync downloads can take 30-60s for large images — use a generous timeout
+        $isSyncRequest = !empty($extra['sync']);
+        $options['timeout']      = $isSyncRequest ? 120 : 10;
+        $options['max_duration'] = $isSyncRequest ? 120 : 10;
 
         $response = $this->httpClient->request(
             'POST',

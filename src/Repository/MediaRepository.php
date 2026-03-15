@@ -50,6 +50,31 @@ final class MediaRepository extends EntityRepository
         }
     }
 
+    /**
+     * Iterate [url => rawData] pairs for building context maps on dispatch.
+     * @return iterable<string, array>
+     */
+    public function iterateUrlsWithContext(?string $status = null, ?int $limit = null): iterable
+    {
+        $qb = $this->createQueryBuilder('m')
+            ->select('m.externalUrl', 'm.rawData');
+
+        if ($status !== null) {
+            $qb->andWhere('m.status = :status')
+               ->setParameter('status', $status);
+        }
+
+        if ($limit !== null) {
+            $qb->setMaxResults($limit);
+        }
+
+        foreach ($qb->getQuery()->toIterable() as $row) {
+            if ($row['externalUrl']) {
+                yield $row['externalUrl'] => ($row['rawData'] ?? []);
+            }
+        }
+    }
+
     public function upsertFromBatchResult(BatchDispatchResult $result): void
     {
         foreach ($result->media as $registration) {

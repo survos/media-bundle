@@ -6,6 +6,7 @@ namespace Survos\MediaBundle\Command;
 use Doctrine\ORM\EntityManagerInterface;
 use Survos\MediaBundle\Entity\BaseMedia;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -17,8 +18,22 @@ final class MediaStatsCommand
     ) {
     }
 
-    public function __invoke(SymfonyStyle $io): int
-    {
+    public function __invoke(
+        SymfonyStyle $io,
+        #[Option('Truncate the entire media table (requires --force)')] bool $clear = false,
+        #[Option('Required to confirm destructive --clear operation')]   bool $force = false,
+    ): int {
+        if ($clear) {
+            if (!$force) {
+                $io->error('--clear requires --force to confirm truncation of the media table.');
+                return Command::FAILURE;
+            }
+            $conn = $this->entityManager->getConnection();
+            $conn->executeStatement('DELETE FROM media');
+            $io->success('Media table cleared.');
+            return Command::SUCCESS;
+        }
+
         $repo = $this->entityManager->getRepository(BaseMedia::class);
 
         $total = (int) $repo->createQueryBuilder('m')
