@@ -6,6 +6,7 @@ namespace Survos\MediaBundle\Command;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Survos\MediaBundle\Entity\BaseMedia;
+use Survos\MediaBundle\Message\DispatchBatchMessage;
 use Survos\MediaBundle\Repository\MediaRepository;
 use Survos\MediaBundle\Service\MediaBatchDispatcher;
 use Survos\MediaBundle\Service\MediaRegistry;
@@ -13,6 +14,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 use function basename;
 use function getcwd;
@@ -24,6 +26,7 @@ final class SyncMediaCommand
         private readonly EntityManagerInterface $entityManager,
         private readonly MediaBatchDispatcher   $dispatcher,
         private readonly MediaRegistry          $mediaRegistry,
+        private readonly ?MessageBusInterface   $bus = null,
     ) {
     }
 
@@ -47,30 +50,41 @@ final class SyncMediaCommand
 
         #[Option('Upload only — fire-and-forget, skip reading status back from mediary. Much faster for large initial imports.')]
         bool $uploadOnly = false,
+
+        #[Option('Dispatch each batch as an async Messenger message. Prevents timeouts on large datasets. Requires a worker.')]
+        bool $async = false,
     ): int {
         /** @var MediaRepository $repo */
         $repo   = $this->entityManager->getRepository(BaseMedia::class);
         $client = basename((string) getcwd());
         $io->note(sprintf('Client: %s', $client));
 
+        if ($async && $this->bus === null) {
+            $io->error('--async requires a Messenger bus.');
+            return Command::FAILURE;
+        }
+
+        // Single-URL debug mode
         if ($url !== null) {
-            $io->info('Syncing single URL');
             $this->mediaRegistry->ensureMedia($url, flush: true);
-            $extra = $sync ? ['sync' => true] : [];
+            $extra  = $sync ? ['sync' => true] : [];
             $result = $this->dispatcher->dispatch($client, [$url], $extra);
             if (!$uploadOnly) {
                 $repo->upsertFromBatchResult($result);
                 $this->entityManager->flush();
             }
-            $io->success('URL dispatched' . ($uploadOnly ? ' (upload-only, no status readback)' : ' and synced'));
+            $io->success('URL dispatched' . ($uploadOnly ? ' (upload-only)' : ' and synced'));
             return Command::SUCCESS;
         }
 
         $statusFilter = $all ? null : 'new';
+        $totalCount   = $repo->countUrlsWithContext($statusFilter, $limit);
 
-        // Count total for progress bar
-        $totalCount = $repo->countUrlsWithContext($statusFilter, $limit);
-        $io->note(sprintf('Media to sync: %d (upload-only: %s)', $totalCount, $uploadOnly ? 'yes' : 'no'));
+        $io->note(sprintf('Media to sync: %d (upload-only: %s, async: %s)',
+            $totalCount,
+            $uploadOnly ? 'yes' : 'no',
+            $async ? 'yes — run: bin/console messenger:consume media' : 'no'
+        ));
 
         if ($totalCount === 0) {
             $io->success('Nothing to sync.');
@@ -82,31 +96,31 @@ final class SyncMediaCommand
         $progress->setMessage('starting...');
         $progress->start();
 
-        $batch = [];   // [url => sourceMetaArray]
+        $batch = [];
         $total = 0;
 
-        foreach ($repo->iterateUrlsWithContext($statusFilter, $limit) as $url => $rawData) {
-            $batch[$url] = $rawData;
+        foreach ($repo->iterateUrlsWithContext($statusFilter, $limit) as $batchUrl => $rawData) {
+            $batch[$batchUrl] = $rawData;
             if (count($batch) >= $batchSize) {
-                $total = $this->dispatchBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $progress);
+                $total = $this->flushBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $async, $progress);
                 $batch = [];
             }
         }
         if ($batch !== []) {
-            $total = $this->dispatchBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $progress);
+            $total = $this->flushBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $async, $progress);
         }
 
         $progress->finish();
         $io->newLine(2);
         $io->success(sprintf('Dispatched %d media URLs%s',
             $total,
-            $uploadOnly ? ' (upload-only — mediary will process asynchronously)' : ''
+            $async ? ' as async messages' : ($uploadOnly ? ' (upload-only)' : '')
         ));
         return Command::SUCCESS;
     }
 
-    /** @param array<string, array> $batch  url => sourceMetaArray */
-    private function dispatchBatch(
+    /** @param array<string, array> $batch url => rawData */
+    private function flushBatch(
         string $client,
         array $batch,
         MediaRepository $repo,
@@ -114,6 +128,7 @@ final class SyncMediaCommand
         SymfonyStyle $io,
         bool $sync,
         bool $uploadOnly,
+        bool $async,
         mixed $progress,
     ): int {
         $urls       = array_keys($batch);
@@ -125,16 +140,33 @@ final class SyncMediaCommand
             }
         }
 
-        $extra = $contextMap !== [] ? ['context' => $contextMap] : [];
-        if ($sync) {
-            $extra['sync'] = true;
-        }
-
-        $result = $this->dispatcher->dispatch($client, $urls, $extra);
-
-        if (!$uploadOnly) {
-            $repo->upsertFromBatchResult($result);
-            $this->entityManager->flush();
+        if ($async && $this->bus !== null) {
+            $this->bus->dispatch(new DispatchBatchMessage(
+                client:     $client,
+                urls:       $urls,
+                contextMap: $contextMap,
+                uploadOnly: $uploadOnly,
+            ));
+        } else {
+            try {
+                $extra = $contextMap !== [] ? ['context' => $contextMap] : [];
+                if ($sync) {
+                    $extra['sync'] = true;
+                }
+                $result = $this->dispatcher->dispatch($client, $urls, $extra);
+                if (!$uploadOnly) {
+                    $repo->upsertFromBatchResult($result);
+                    $this->entityManager->flush();
+                }
+            } catch (\Symfony\Component\HttpClient\Exception\TransportException $e) {
+                // Timeout — log and continue, URLs remain status=new for next run
+                if ($io->isVerbose()) {
+                    $io->writeln(sprintf(
+                        '  <comment>timeout on %d URLs — skipping batch (retry on next sync)</comment>',
+                        count($urls)
+                    ));
+                }
+            }
         }
 
         $done = $total + count($urls);

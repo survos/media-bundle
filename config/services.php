@@ -13,6 +13,7 @@ use Survos\MediaBundle\Provider\YouTubeProvider;
 use Survos\MediaBundle\Provider\FlickrProvider;
 use Survos\MediaBundle\Service\MediaBatchDispatcher;
 use Survos\MediaBundle\Service\MediaKeyService;
+use Survos\MediaBundle\MessageHandler\DispatchBatchMessageHandler;
 use Survos\MediaBundle\Service\MediaManager;
 use Survos\MediaBundle\Twig\MediaExtension;
 
@@ -52,6 +53,7 @@ return static function (ContainerConfigurator $container): void {
     $services->set(MediaStatsCommand::class)
         ->tag('console.command');
     $services->set(MediaBatchDispatcher::class);
+    $services->set(DispatchBatchMessageHandler::class);
 
     // Twig
     $services->set(MediaExtension::class)

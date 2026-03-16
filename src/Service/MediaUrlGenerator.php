@@ -54,7 +54,67 @@ final class MediaUrlGenerator
     public function __construct(
         private readonly ?string $mediaServerHost,
         private readonly ?string $mediaServerResizePath,
+        // imgProxy direct signing — bypasses mediary, proxies remote URLs
+        #[\Symfony\Component\DependencyInjection\Attribute\Autowire('%env(default::IMGPROXY_HOST)%')]
+        private readonly ?string $imgProxyHost = null,
+        #[\Symfony\Component\DependencyInjection\Attribute\Autowire('%env(default::IMGPROXY_KEY)%')]
+        private readonly ?string $imgProxyKey = null,
+        #[\Symfony\Component\DependencyInjection\Attribute\Autowire('%env(default::IMGPROXY_SALT)%')]
+        private readonly ?string $imgProxySalt = null,
     ) {
+    }
+
+    /**
+     * Generate a signed imgProxy URL for ANY remote image URL —
+     * IIIF endpoints, CDN thumbnails, provider image servers, etc.
+     *
+     * imgProxy fetches and caches the remote image; we never store it locally.
+     * Use this instead of mediary for:
+     *   - DC/Europeana IIIF endpoints (hit their IIIF at the right size)
+     *   - Fortepan/PP CDN thumbnails (for AI analysis)
+     *   - Any collection that provides its own image URLs
+     *
+     * @param string $remoteUrl  The source image URL (IIIF, CDN, etc.)
+     * @param int    $width      Target width in pixels (0 = no constraint)
+     * @param int    $height     Target height in pixels (0 = no constraint)
+     * @param string $preset     'small'|'medium'|'large' or 'ai' (512px)
+     */
+    public function resizeRemote(
+        string $remoteUrl,
+        int    $width   = 0,
+        int    $height  = 0,
+        string $preset  = self::PRESET_SMALL,
+    ): string {
+        if (!$this->imgProxyHost) {
+            // No imgProxy configured — return the source URL as-is
+            return $remoteUrl;
+        }
+
+        // Preset sizes
+        $sizes = [
+            self::PRESET_SMALL  => [192, 192],
+            self::PRESET_MEDIUM => [600, 400],
+            self::PRESET_LARGE  => [1200, 800],
+            'ai'                => [512, 512],   // AI vision: one size for all models
+            'thumb'             => [300, 300],
+        ];
+
+        if ($width === 0 && $height === 0) {
+            [$width, $height] = $sizes[$preset] ?? [300, 300];
+        }
+
+        $builder = $this->imgProxyKey && $this->imgProxySalt
+            ? UrlBuilder::signed($this->imgProxyKey, $this->imgProxySalt)
+            : new UrlBuilder();
+
+        return rtrim($this->imgProxyHost, '/') . $builder
+            ->usePlain()
+            ->with(
+                new Resize('fit'),
+                new Width($width),
+                new Height($height),
+            )
+            ->url($remoteUrl);
     }
 
     public function resize(string|BaseMedia $media, string $preset, bool $mediaServer = false, ?string $client=null): string
