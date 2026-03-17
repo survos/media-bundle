@@ -25,6 +25,7 @@ final class MediaBatchDispatcher
     {
         $options = [
             'json' => array_merge([
+                'client'   => $client,
                 'urls'     => $urls,
                 'dispatch' => true,
             ], $extra),
