@@ -9,29 +9,31 @@
     "type": "symfony-bundle",
     "require": {
         "php": "^8.4",
-        "symfony/config": "^7.3||^8.0",
-        "symfony/dependency-injection": "^7.3||^8.0",
-        "symfony/http-kernel": "^7.3||^8.0",
+        "symfony/config": "^8.0",
+        "symfony/dependency-injection": "^8.0",
+        "symfony/http-kernel": "^8.0",
         "twig/twig": "^3.4",
         "doctrine/dbal": "^4.3.2",
-        "doctrine/doctrine-bundle": "^2.7|^3.0",
+        "doctrine/doctrine-bundle": "^3.0",
         "onliner/imgproxy-php": "^0.2",
         "mperonnet/imgproxy-php": "^1.0",
-        "museado/data-bundle": "^1.0",
-        "survos/import-bundle": "^1.0"
+        "survos/data-bundle": "^2.0",
+        "survos/import-bundle": "^2.0",
+        "symfony/ux-twig-component": "^2.32"
     },
     "suggest": {
         "symfony/ai-platform": "Required for #[With] JSON Schema constraints on MediaSyncItem properties"
     },
     "require-dev": {
+        "roave/security-advisories": "dev-latest",
         "phpstan/phpstan": "^2.0",
-        "symfony/browser-kit": "^7.3||^8.0",
-        "symfony/framework-bundle": "^7.3||^8.0",
-        "symfony/phpunit-bridge": "^7.3||^8.0",
-        "symfony/twig-bundle": "^7.3||^8.0",
-        "symfony/var-dumper": "^7.3||^8.0",
-        "openai-php/client": "^0.16.1",
-        "symfony/http-client": "^7.3||^8.0",
+        "symfony/browser-kit": "^8.0",
+        "symfony/framework-bundle": "^8.0",
+        "symfony/phpunit-bridge": "^8.0",
+        "symfony/twig-bundle": "^8.0",
+        "symfony/var-dumper": "^8.0",
+        "openai-php/client": "^v0.19.0",
+        "symfony/http-client": "^8.0",
         "nyholm/psr7": "^1.8"
     },
     "autoload": {

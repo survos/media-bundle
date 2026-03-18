@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Dto;
 
+use Symfony\AI\Platform\Contract\JsonSchema\Attribute\With;
+
 /**
  * A progressively-filled enrichment record for a single media item.
  *

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Survos\MediaBundle\Service;
 
 use Survos\MediaBundle\Dto\BatchDispatchResult;
+use Survos\MediaBundle\Dto\MediaEnrichment;
 use Survos\MediaBundle\Dto\MediaProbeResult;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -15,6 +16,50 @@ final class MediaBatchDispatcher
         private readonly HttpClientInterface $httpClient,
         #[Autowire('%env(MEDIARY_ENDPOINT)%')] private readonly string $mediaServerBaseUrl,
     ) {
+    }
+
+    /**
+     * Dispatch a batch of MediaEnrichment DTOs to mediary.
+     *
+     * Sends the full toValueMap() output as context for each URL so mediary
+     * stores dcterms:title, dcterms:subject, content_type, etc. in sourceMeta.
+     * This replaces ad-hoc aiTasks lists — the DTO's null fields drive what AI fills.
+     *
+     * @param MediaEnrichment[] $enrichments  keyed by image URL (or imageUrlForAi())
+     */
+    public function dispatchEnrichments(string $client, array $enrichments, array $extra = []): BatchDispatchResult
+    {
+        $urls       = [];
+        $contextMap = [];
+
+        foreach ($enrichments as $url => $enrichment) {
+            $imageUrl = is_string($url) ? $url : $enrichment->imageUrlForAi();
+            if (!$imageUrl) continue;
+
+            $urls[] = $imageUrl;
+            $meta   = $enrichment->toValueMap();
+
+            // Also include non-DC fields mediary needs to direct AI pipeline
+            if ($enrichment->contentType) {
+                $meta['content_type']     = $enrichment->contentType;
+            }
+            if ($enrichment->aggregator) {
+                $meta['aggregator']       = $enrichment->aggregator;
+            }
+            if ($enrichment->iiifBase) {
+                $meta['iiif_base']        = $enrichment->iiifBase;
+            }
+            if ($enrichment->thumbUrl) {
+                $meta['thumbnail_url']    = $enrichment->thumbUrl;
+            }
+            if ($enrichment->id) {
+                $meta['source_id']        = $enrichment->id;
+            }
+
+            $contextMap[$imageUrl] = $meta;
+        }
+
+        return $this->dispatch($client, $urls, array_merge(['context' => $contextMap], $extra));
     }
 
     /**

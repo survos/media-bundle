@@ -1,0 +1,188 @@
+{% if not this.hasResults() %}
+  <div class="text-muted small">No {{ this.group == 'ocr' ? 'OCR' : 'AI' }} results yet — run tasks below.</div>
+{% else %}
+
+  {% set tasks = this.tasks() %}
+
+  {# ── enrich_from_thumbnail: rich structured display ─────────────────────── #}
+  {% set enrich = this.enrichResult() %}
+  {% if enrich and this.group == 'image' %}
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span class="fw-semibold">{{ this.taskLabel('enrich_from_thumbnail') }}</span>
+        {% if enrich.confidence is defined and enrich.confidence < 1 %}
+          <span class="badge bg-secondary-lt">{{ (enrich.confidence * 100)|round }}% confidence</span>
+        {% endif %}
+      </div>
+      <div class="card-body small">
+
+        {% if enrich.dense_summary ?? false %}
+          <div class="mb-3 p-2 bg-blue-lt rounded">
+            <div class="small text-muted mb-1">Dense Summary <span class="text-muted">(for search/chat)</span></div>
+            <div>{{ enrich.dense_summary }}</div>
+          </div>
+        {% endif %}
+
+        {% if enrich.title??false %}
+          <div class="mb-2">
+            <span class="text-muted">Title</span>
+            <span class="ms-2 fw-semibold">{{ enrich.title }}</span>
+            {% if enrich.title_confidence is defined and enrich.title_confidence != 'high' %}
+              <span class="badge bg-warning-lt ms-1">{{ enrich.title_confidence }}</span>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if enrich.description ?? false %}
+          <div class="mb-2">
+            <div class="text-muted">Description</div>
+            <div>{{ enrich.description }}</div>
+          </div>
+        {% endif %}
+
+        {% if enrich.content_type ?? false %}
+          <div class="mb-2">
+            <span class="text-muted">Type</span>
+            <span class="badge bg-azure ms-2">{{ enrich.content_type }}</span>
+            {% if enrich.content_type_confidence is defined %}
+              <span class="badge bg-secondary-lt ms-1">{{ enrich.content_type_confidence }}</span>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if enrich.date_hint ?? false %}
+          <div class="mb-2">
+            <span class="text-muted">Date</span>
+            <span class="ms-2">{{ enrich.date_hint }}</span>
+            {% if enrich.date_confidence is defined and enrich.date_confidence != 'high' %}
+              <span class="badge bg-warning-lt ms-1">{{ enrich.date_confidence }}</span>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {# Keywords by confidence tier #}
+        {% set kwHigh   = enrich.keywords_high   ?? [] %}
+        {% set kwMedium = enrich.keywords_medium ?? [] %}
+        {% set kwLow    = enrich.keywords_low    ?? [] %}
+        {% if kwHigh or kwMedium or kwLow %}
+          <div class="mb-2">
+            <div class="text-muted mb-1">Keywords</div>
+            {% for k in kwHigh %}
+              <span class="badge bg-secondary me-1 mb-1">{{ k }}</span>
+            {% endfor %}
+            {% for k in kwMedium %}
+              <span class="badge bg-secondary-lt me-1 mb-1" title="medium confidence">{{ k }}</span>
+            {% endfor %}
+            {% for k in kwLow %}
+              <span class="badge bg-muted text-muted border me-1 mb-1" title="low confidence — basis available">{{ k }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if enrich.people is defined and enrich.people %}
+          <div class="mb-2">
+            <div class="text-muted mb-1">People</div>
+            {% for p in enrich.people %}<span class="badge bg-cyan-lt me-1">{{ p }}</span>{% endfor %}
+          </div>
+        {% endif %}
+
+        {% if enrich.places is defined and enrich.places %}
+          <div class="mb-2">
+            <div class="text-muted mb-1">Places</div>
+            {% for p in enrich.places %}<span class="badge bg-green-lt me-1">{{ p }}</span>{% endfor %}
+          </div>
+        {% endif %}
+
+        {# Speculations — shown distinctly as interpretive, not factual #}
+        {% if enrich.speculations is defined and enrich.speculations %}
+          <div class="mb-2">
+            <div class="text-muted mb-1">
+              Interpretive observations
+              <span class="badge bg-orange-lt ms-1" title="AI inference, not established fact">speculative</span>
+            </div>
+            {% for s in enrich.speculations %}
+              <div class="border rounded p-2 mb-1 bg-orange-lt">
+                <div>{{ s.claim }}</div>
+                {% if s.basis is defined and s.basis %}
+                  <div class="text-muted small mt-1">Basis: {{ s.basis }}</div>
+                {% endif %}
+                {% if s.confidence is defined %}
+                  <div class="text-muted small">Confidence: {{ (s.confidence * 100)|round }}%</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {# Full keyword detail (collapsible) #}
+        {% set allKw = enrich.keywords ?? [] %}
+        {% if allKw %}
+          <details class="mt-2">
+            <summary class="text-muted small cursor-pointer">Keyword detail with basis</summary>
+            <table class="table table-xs mt-2">
+              <thead><tr><th>Term</th><th>Confidence</th><th>Basis</th></tr></thead>
+              <tbody>
+              {% for kw in allKw %}
+                {% if kw is iterable %}
+                  <tr>
+                    <td>{{ kw.term }}</td>
+                    <td>
+                      <span class="badge bg-{{ kw.confidence == 'high' ? 'success' : (kw.confidence == 'medium' ? 'warning' : 'secondary') }}-lt">
+                        {{ kw.confidence }}
+                      </span>
+                    </td>
+                    <td class="text-muted small">{{ kw.basis ?? '—' }}</td>
+                  </tr>
+                {% endif %}
+              {% endfor %}
+              </tbody>
+            </table>
+          </details>
+        {% endif %}
+
+      </div>
+    </div>
+  {% endif %}
+
+  {# ── All other tasks: one collapsible card each ──────────────────────────── #}
+  {% for task, result in tasks %}
+    {% if task != 'enrich_from_thumbnail' %}
+      <div class="card mb-2">
+        <details>
+          <summary class="card-header d-flex justify-content-between align-items-center" style="cursor:pointer;list-style:none">
+            <span class="fw-semibold">{{ this.taskLabel(task) }}</span>
+            <span class="badge bg-secondary-lt">{{ task }}</span>
+          </summary>
+          <div class="card-body small">
+
+            {# OCR tasks: show text prominently #}
+            {% if task in ['ocr','ocr_mistral','transcribe_handwriting','annotate_handwriting'] %}
+              {% set text = result.text ?? result.transcription ?? result.annotation ?? null %}
+              {% if text %}
+                <pre class="bg-light p-2 rounded" style="max-height:300px;overflow-y:auto;white-space:pre-wrap;font-size:0.8rem">{{ text }}</pre>
+              {% else %}
+                <div class="text-muted">No text extracted.</div>
+              {% endif %}
+
+            {# layout task #}
+            {% elseif task == 'layout' %}
+              {% if result.regions is defined %}
+                {% for region in result.regions %}
+                  <div class="badge bg-secondary-lt me-1">{{ region.type ?? region }}</div>
+                {% endfor %}
+              {% else %}
+                <pre class="small text-muted">{{ result|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+              {% endif %}
+
+            {# Generic: show as formatted JSON #}
+            {% else %}
+              <pre class="small text-muted" style="max-height:200px;overflow-y:auto">{{ result|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+            {% endif %}
+
+          </div>
+        </details>
+      </div>
+    {% endif %}
+  {% endfor %}
+
+{% endif %}

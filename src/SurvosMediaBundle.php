@@ -100,8 +100,29 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
     }
 
 
+    public function getPath(): string
+    {
+        return \dirname(__DIR__);
+    }
+
      public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
      {
+         // Register bundle templates path so <twig:SourceMetadata> finds its template
+         if ($builder->hasExtension('twig')) {
+             $builder->prependExtensionConfig('twig', [
+                 'paths' => [\dirname(__DIR__) . '/templates' => 'SurvosMedia'],
+             ]);
+         }
+
+         // Register component namespace so TwigComponent can resolve bundle components
+         if ($builder->hasExtension('ux_twig_component')) {
+             $builder->prependExtensionConfig('ux_twig_component', [
+                 'defaults' => [
+                     'Survos\\MediaBundle\\Twig\\Components\\' => 'components/',
+                 ],
+             ]);
+         }
+
          $builder->prependExtensionConfig('doctrine', [
              'orm' => [
                  'mappings' => [
@@ -127,6 +148,19 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
                 ->setAutowired(true)
                 ->setAutoconfigured(true)
                 ->setPublic(true);
+        }
+
+        // Register Twig components
+        if (class_exists(\Symfony\UX\TwigComponent\Attribute\AsTwigComponent::class)) {
+            foreach ([
+                \Survos\MediaBundle\Twig\Components\SourceMetadata::class,
+                \Survos\MediaBundle\Twig\Components\AiMetadata::class,
+            ] as $componentClass) {
+                $builder->register($componentClass)
+                    ->setAutowired(true)
+                    ->setAutoconfigured(true)
+                    ->setPublic(true);
+            }
         }
 
 
