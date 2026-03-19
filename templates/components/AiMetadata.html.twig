@@ -60,21 +60,33 @@
           </div>
         {% endif %}
 
-        {# Keywords by confidence tier #}
-        {% set kwHigh   = enrich.keywords_high   ?? [] %}
-        {% set kwMedium = enrich.keywords_medium ?? [] %}
-        {% set kwLow    = enrich.keywords_low    ?? [] %}
-        {% if kwHigh or kwMedium or kwLow %}
+        {# Keywords — each item is either a string or {term, confidence, basis} #}
+        {% set allKwRaw = enrich.keywords ?? [] %}
+        {% if allKwRaw %}
           <div class="mb-2">
-            <div class="text-muted mb-1">Keywords</div>
-            {% for k in kwHigh %}
-              <span class="badge bg-secondary me-1 mb-1">{{ k }}</span>
-            {% endfor %}
-            {% for k in kwMedium %}
-              <span class="badge bg-secondary-lt me-1 mb-1" title="medium confidence">{{ k }}</span>
-            {% endfor %}
-            {% for k in kwLow %}
-              <span class="badge bg-muted text-muted border me-1 mb-1" title="low confidence — basis available">{{ k }}</span>
+            <div class="text-muted mb-1 d-flex align-items-center gap-2">
+              Keywords
+              <span class="text-muted small" title="Color and symbol indicate AI confidence">
+                <span class="badge bg-blue-lt">high</span>
+                <span class="badge bg-azure-lt">medium ?</span>
+                <span class="badge bg-secondary-lt">low ??</span>
+              </span>
+            </div>
+            {% for k in allKwRaw %}
+              {% if k is iterable %}
+                {% set conf = k.confidence ?? 'high' %}
+                {% set term = k.term ?? k %}
+                {% set basis = k.basis ?? '' %}
+                {% if conf == 'high' %}
+                  <span class="badge bg-blue-lt me-1 mb-1" title="{{ basis }}">{{ term }}</span>
+                {% elseif conf == 'medium' %}
+                  <span class="badge bg-azure-lt me-1 mb-1" title="{{ basis }}">{{ term }} ?</span>
+                {% else %}
+                  <span class="badge bg-secondary-lt text-muted me-1 mb-1" title="{{ basis }}">{{ term }} ??</span>
+                {% endif %}
+              {% else %}
+                <span class="badge bg-blue-lt me-1 mb-1">{{ k }}</span>
+              {% endif %}
             {% endfor %}
           </div>
         {% endif %}
@@ -114,31 +126,7 @@
           </div>
         {% endif %}
 
-        {# Full keyword detail (collapsible) #}
-        {% set allKw = enrich.keywords ?? [] %}
-        {% if allKw %}
-          <details class="mt-2">
-            <summary class="text-muted small cursor-pointer">Keyword detail with basis</summary>
-            <table class="table table-xs mt-2">
-              <thead><tr><th>Term</th><th>Confidence</th><th>Basis</th></tr></thead>
-              <tbody>
-              {% for kw in allKw %}
-                {% if kw is iterable %}
-                  <tr>
-                    <td>{{ kw.term }}</td>
-                    <td>
-                      <span class="badge bg-{{ kw.confidence == 'high' ? 'success' : (kw.confidence == 'medium' ? 'warning' : 'secondary') }}-lt">
-                        {{ kw.confidence }}
-                      </span>
-                    </td>
-                    <td class="text-muted small">{{ kw.basis ?? '—' }}</td>
-                  </tr>
-                {% endif %}
-              {% endfor %}
-              </tbody>
-            </table>
-          </details>
-        {% endif %}
+
 
       </div>
     </div>
