@@ -3,15 +3,18 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Trait;
 
-use Survos\AiVisionBundle\AiVisionTask;
-
 /**
- * Doctrine-flavoured storage columns for AI vision enrichment.
+ * Doctrine-flavoured storage columns for AI pipeline enrichment.
  *
- * Add to any entity that implements AiVisionInterface and wants to store
- * task results in its own database row.
+ * Add to any entity that wants to store ai-pipeline-bundle task results
+ * in its own database row.  Wrap in DoctrineResultStore to pass to
+ * AiPipelineRunner:
  *
- * Required column mappings (add to your entity):
+ *   $store = new DoctrineResultStore($entity, $em, fn() => $thumbnailUrl);
+ *   $runner->runAll($store, ['enrich_from_thumbnail']);
+ *   $em->flush();
+ *
+ * Required ORM columns (add to your entity):
  *
  *   #[ORM\Column(type: Types::JSON)]
  *   public array $aiQueue = [];
@@ -24,12 +27,6 @@ use Survos\AiVisionBundle\AiVisionTask;
  *
  *   #[ORM\Column(nullable: true)]
  *   public ?string $aiDocumentType = null;
- *
- * Then wrap in DoctrineResultStore to hand to AiVisionTaskRunner:
- *
- *   $store = new DoctrineResultStore($entity, $entityManager, fn() => $entity->imageUrl);
- *   $runner->runAll($store, AiVisionTaskRunner::buildQueue(AiVisionTask::quickScanPipeline()));
- *   $entityManager->flush();
  */
 trait HasAiVisionTrait
 {
@@ -40,22 +37,11 @@ trait HasAiVisionTrait
 
     // ── Queue helpers ─────────────────────────────────────────────────────────
 
-    public function enqueueAiTasks(AiVisionTask ...$tasks): void
+    public function enqueueAiTask(string $taskName): void
     {
-        foreach ($tasks as $task) {
-            if (!in_array($task->value, $this->aiQueue, true)) {
-                $this->aiQueue[] = $task->value;
-            }
+        if (!in_array($taskName, $this->aiQueue, true)) {
+            $this->aiQueue[] = $taskName;
         }
-    }
-
-    public function enqueueAiPipeline(string $pipeline = 'quick'): void
-    {
-        $tasks = match ($pipeline) {
-            'full'  => AiVisionTask::fullEnrichmentPipeline(),
-            default => AiVisionTask::quickScanPipeline(),
-        };
-        $this->enqueueAiTasks(...$tasks);
     }
 
     public function hasAiTaskPending(): bool
@@ -70,10 +56,10 @@ trait HasAiVisionTrait
 
     // ── Result accessors ──────────────────────────────────────────────────────
 
-    public function getAiResult(AiVisionTask $task): ?array
+    public function getAiResult(string $taskName): ?array
     {
         foreach ($this->aiCompleted as $entry) {
-            if (($entry['task'] ?? null) === $task->value) {
+            if (($entry['task'] ?? null) === $taskName) {
                 return $entry['result'] ?? null;
             }
         }
@@ -82,25 +68,30 @@ trait HasAiVisionTrait
 
     public function getOcrText(): ?string
     {
-        return $this->getAiResult(AiVisionTask::OCR_MISTRAL)['text']
-            ?? $this->getAiResult(AiVisionTask::OCR)['text']
+        return $this->getAiResult('ocr')['text']
+            ?? $this->getAiResult('ocr_mistral')['text']
             ?? null;
     }
 
     public function getAiDescription(): ?string
     {
-        return $this->getAiResult(AiVisionTask::CONTEXT_DESCRIPTION)['description']
-            ?? $this->getAiResult(AiVisionTask::BASIC_DESCRIPTION)['description']
+        return $this->getAiResult('enrich_from_thumbnail')['description']
+            ?? $this->getAiResult('basic_description')['description']
+            ?? $this->getAiResult('context_description')['description']
             ?? null;
     }
 
     public function getAiTitle(): ?string
     {
-        return $this->getAiResult(AiVisionTask::GENERATE_TITLE)['title'] ?? null;
+        return $this->getAiResult('enrich_from_thumbnail')['title']
+            ?? $this->getAiResult('generate_title')['title']
+            ?? null;
     }
 
     public function getAiKeywords(): array
     {
-        return $this->getAiResult(AiVisionTask::KEYWORDS)['keywords'] ?? [];
+        return $this->getAiResult('enrich_from_thumbnail')['keywords_high']
+            ?? $this->getAiResult('keywords')['keywords']
+            ?? [];
     }
 }
