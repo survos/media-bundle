@@ -3,7 +3,8 @@
     "description": "Manage media without direct relationships",
     "keywords": [
         "symfony-ux",
-        "symfony"
+        "symfony",
+        "ux"
     ],
     "license": "MIT",
     "type": "symfony-bundle",

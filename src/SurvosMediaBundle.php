@@ -156,10 +156,12 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
                 \Survos\MediaBundle\Twig\Components\SourceMetadata::class,
                 \Survos\MediaBundle\Twig\Components\AiMetadata::class,
             ] as $componentClass) {
-                $builder->register($componentClass)
-                    ->setAutowired(true)
-                    ->setAutoconfigured(true)
-                    ->setPublic(true);
+                if (class_exists($componentClass)) {
+                    $builder->register($componentClass)
+                        ->setAutowired(true)
+                        ->setAutoconfigured(true)
+                        ->setPublic(true);
+                }
             }
         }
 

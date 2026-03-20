@@ -38,6 +38,94 @@ trait HasEnrichmentTrait
         return $this->defaults['enrich_from_thumbnail'] ?? [];
     }
 
+    /**
+     * Source (human-provided) metadata mapped to dcterms: keys
+     * for use with <twig:SourceMetadata :ctx="entity.sourceMeta" />.
+     *
+     * Reads from $defaults['import'] (snake_case normalized JSONL keys)
+     * and maps to the dcterms: namespace the SourceMetadata component expects.
+     *
+     * @return array<string,mixed>
+     */
+    public function getSourceMeta(): array
+    {
+        $import = $this->defaults['import'] ?? [];
+        if ($import === []) {
+            return [];
+        }
+
+        // Priority-ordered: first matching key wins for each dcterms: field
+        $map = [
+            'title'         => 'dcterms:title',
+            'description'   => 'dcterms:description',
+            'date_display'  => 'dcterms:date',
+            'date'          => 'dcterms:date',
+            'creators'      => 'dcterms:creator',
+            'subjects'      => 'dcterms:subject',
+            'subject_facet' => 'dcterms:subject',
+            'collections'   => 'dcterms:isPartOf',
+            'institution'   => 'dcterms:publisher',
+            'language'      => 'dcterms:language',
+            'rights'        => 'rights',         // legacy alias handled by SourceMetadata
+            'license'       => 'license_uri',
+            'reuse_allowed' => 'reuse_allowed',
+            'source_url'    => 'dcterms:source',
+            'detail_url'    => 'dcterms:source',
+        ];
+
+        $out = [];
+        foreach ($map as $src => $dst) {
+            if (!isset($out[$dst]) && isset($import[$src]) && $import[$src] !== null && $import[$src] !== '') {
+                $out[$dst] = $import[$src];
+            }
+        }
+
+        // content_type drives type-specific field display
+        if (isset($import['content_type'])) {
+            $out['content_type'] = $import['content_type'];
+        } elseif (isset($import['genre_basic'][0])) {
+            $out['content_type'] = strtolower((string) $import['genre_basic'][0]);
+        }
+
+        // Geo extras — shown in catch-all section
+        foreach (['latitude', 'longitude', 'city', 'state', 'county', 'country'] as $geo) {
+            if (isset($import[$geo]) && $import[$geo] !== null) {
+                $out[$geo] = $import[$geo];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * All AI task results keyed by task name, ready for
+     * <twig:AiMetadata :results="entity.aiResults" />.
+     *
+     * Merges legacy per-task aiCompleted[] with enrich_from_thumbnail
+     * from defaults (which the pipeline stores separately).
+     *
+     * @return array<string,mixed>
+     */
+    public function getAiResults(): array
+    {
+        $results = [];
+
+        // Legacy per-task entries from aiCompleted column
+        foreach ($this->aiCompleted ?? [] as $entry) {
+            if (is_array($entry) && isset($entry['task'])) {
+                $results[$entry['task']] = $entry['result'] ?? $entry;
+            }
+        }
+
+        // enrich_from_thumbnail lives in defaults, not aiCompleted
+        $enrich = $this->defaults['enrich_from_thumbnail'] ?? null;
+        if ($enrich !== null) {
+            $results['enrich_from_thumbnail'] = $enrich;
+        }
+
+        return $results;
+    }
+
     // ── Computed top-level fields — serialized into Meili as first-class keys ──
     // Each getter reads from getEnrichment() so there is one source of truth.
     // These are NOT stored columns — they are virtual, computed on read.

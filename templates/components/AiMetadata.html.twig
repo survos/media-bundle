@@ -162,6 +162,74 @@
                 <pre class="small text-muted">{{ result|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
               {% endif %}
 
+            {# Census / tabular extraction — render as proper HTML tables #}
+            {% elseif task == 'extract_census' %}
+              {% if result.title is defined and result.title %}
+                <div class="fw-semibold mb-2">{{ result.title }}</div>
+              {% endif %}
+              {% if result.language is defined and result.language %}
+                <div class="badge bg-secondary-lt mb-2">{{ result.language }}</div>
+              {% endif %}
+              {% if result.confidence is defined %}
+                <div class="badge bg-blue-lt mb-2">{{ result.confidence }} confidence</div>
+              {% endif %}
+              {% if result.has_tables is defined and not result.has_tables %}
+                <div class="alert alert-warning small py-1">No tabular data found in this image.</div>
+              {% endif %}
+              {% if result.tables is defined and result.tables %}
+                {# Check if tables is a proper array of objects or a flat/malformed array #}
+                {% set firstTable = result.tables|first %}
+                {% if firstTable is iterable and firstTable.headers is defined %}
+                  {# Properly structured: [{headers, rows, notes}] #}
+                  {% for table in result.tables %}
+                    <div class="mb-3">
+                      {% if table.notes is defined and table.notes %}
+                        <div class="text-muted small mb-1 fst-italic">{{ table.notes }}</div>
+                      {% endif %}
+                      <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-hover small mb-0">
+                          {% if table.headers is defined and table.headers %}
+                            <thead class="table-dark">
+                              <tr>
+                                {% for header in table.headers %}
+                                  <th>{{ header }}</th>
+                                {% endfor %}
+                              </tr>
+                            </thead>
+                          {% endif %}
+                          <tbody>
+                            {% for row in table.rows ?? [] %}
+                              <tr>
+                                {% if row is iterable %}
+                                  {% for cell in row %}
+                                    <td>{{ cell }}</td>
+                                  {% endfor %}
+                                {% else %}
+                                  <td>{{ row }}</td>
+                                {% endif %}
+                              </tr>
+                            {% endfor %}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  {# Flat/malformed array — show as raw data with a note #}
+                  <div class="alert alert-info small py-2 mb-2">
+                    Table data was extracted but not fully structured. Showing raw output:
+                  </div>
+                  <pre class="small bg-light p-2 rounded" style="max-height:300px;overflow-y:auto;white-space:pre-wrap;">{{ result.tables|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                {% endif %}
+              {% else %}
+                <div class="text-muted small">No tables extracted.</div>
+              {% endif %}
+              {# Always show raw JSON for debugging until structured output is stable #}
+              <details class="mt-2">
+                <summary class="small text-muted" style="cursor:pointer;">Raw JSON (debug)</summary>
+                <pre class="small text-muted mt-1" style="max-height:200px;overflow-y:auto;font-size:.7rem;">{{ result|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+              </details>
+
             {# Generic: show as formatted JSON #}
             {% else %}
               <pre class="small text-muted" style="max-height:200px;overflow-y:auto">{{ result|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
