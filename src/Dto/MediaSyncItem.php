@@ -284,6 +284,66 @@ final class MediaSyncItem
         ], static fn($v) => $v !== null && $v !== [] && $v !== '');
     }
 
+    /**
+     * Reconstruct a MediaSyncItem from a stored array.
+     *
+     * @param array<string, mixed> $data
+     */
+    public static function fromArray(array $data): self
+    {
+        $item = new self();
+        $item->url = $data['url'] ?? null;
+        $item->reuseAllowed = $data['reuseAllowed'] ?? $data['reuse_allowed'] ?? null;
+        $item->rights = $data['rights'] ?? null;
+        $item->licenseUri = $data['licenseUri'] ?? $data['license_uri'] ?? null;
+        $item->sourceArk = $data['sourceArk'] ?? $data['source_ark'] ?? null;
+        $item->sourceId = $data['sourceId'] ?? $data['source_id'] ?? null;
+        $item->aggregator = $data['aggregator'] ?? null;
+        $item->title = $data['title'] ?? null;
+        $item->description = $data['description'] ?? null;
+        $item->date = $data['date'] ?? null;
+        $item->type = $data['type'] ?? null;
+        $item->creator = $data['creator'] ?? null;
+        $item->subject = $data['subject'] ?? null;
+        $item->institution = $data['institution'] ?? null;
+        $item->collection = $data['collection'] ?? null;
+        $item->iiifBase = $data['iiifBase'] ?? $data['iiif_base'] ?? null;
+        $item->iiifManifest = $data['iiifManifest'] ?? $data['iiif_manifest'] ?? null;
+        $item->thumbnailUrl = $data['thumbnailUrl'] ?? $data['thumbnail_url'] ?? null;
+        $item->sourceUrl = $data['sourceUrl'] ?? $data['source_url'] ?? null;
+        return $item;
+    }
+
+    /**
+     * Serialize to array for JSON storage.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        return array_filter([
+            'url'            => $this->url,
+            'reuseAllowed'   => $this->reuseAllowed,
+            'rights'        => $this->rights,
+            'licenseUri'     => $this->licenseUri,
+            'sourceArk'      => $this->sourceArk,
+            'sourceId'       => $this->sourceId,
+            'aggregator'     => $this->aggregator,
+            'title'         => $this->title,
+            'description'   => $this->description,
+            'date'          => $this->date,
+            'type'          => $this->type,
+            'creator'       => $this->creator,
+            'subject'       => $this->subject,
+            'institution'   => $this->institution,
+            'collection'    => $this->collection,
+            'iiifBase'      => $this->iiifBase,
+            'iiifManifest'  => $this->iiifManifest,
+            'thumbnailUrl'  => $this->thumbnailUrl,
+            'sourceUrl'     => $this->sourceUrl,
+        ], static fn($v) => $v !== null && $v !== [] && $v !== '');
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────
 
     /**
