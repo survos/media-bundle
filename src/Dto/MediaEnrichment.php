@@ -1,298 +1,239 @@
-    <?php
-    declare(strict_types=1);
+<?php
+declare(strict_types=1);
 
-    namespace Survos\MediaBundle\Dto;
+namespace Survos\MediaBundle\Dto;
 
-    use Symfony\AI\Platform\Contract\JsonSchema\Attribute\With;
+final class MediaEnrichment
+{
+    /**
+     * @param string[] $keywords
+     * @param string[] $people
+     * @param string[] $places
+     * @param string[] $organisations
+     * @param string[] $subjects
+     * @param string[] $speculations
+     */
+    public function __construct(
+        public readonly ?string $title,
+        public readonly ?string $description,
+        public readonly ?string $summary,
+        public readonly ?string $denseSummary,
+        public readonly ?string $ocrText,
+        public readonly ?string $documentType,
+        public readonly ?string $documentSubtype,
+        public readonly ?string $contentType,
+        public readonly ?string $dateHint,
+        public readonly ?string $dateRange,
+        public readonly array $keywords,
+        public readonly array $people,
+        public readonly array $places,
+        public readonly array $organisations,
+        public readonly array $subjects,
+        public readonly bool $hasText,
+        public readonly ?float $confidence,
+        public readonly array $speculations,
+        public readonly ?string $imageUrl,
+        public readonly ?string $imageSource,
+    ) {
+    }
 
     /**
-     * A progressively-filled enrichment record for a single media item.
-     *
-     * Each stage populates more fields. The DTO is the single source of truth
-     * that feeds zm Item/Value creation via field_map.yaml.
-     *
-     * Stage 1 — from normalized JSONL (source metadata, free):
-     *   title, description, date, creator, subject, contentType, sourceUrl
-     *
-     * Stage 2 — from mediary sync (after upload):
-     *   s3Url, thumbUrl, width, height, mediaKey, mediaStatus
-     *
-     * Stage 3 — from AI vision (one call per thumbnail, ~$0.0004):
-     *   aiTitle, aiDescription, aiKeywords, aiPeople, aiPlaces, hasText
-     *   Fills only fields that Stage 1 left null.
-     *
-     * Stage 4 — OCR (only when hasText = true):
-     *   transcription
-     *
-     * Stage 5 → zm import:
-     *   Each non-null field maps to a dcterms: Value via field_map.yaml
-     *
-     * The `source` field tracks which stage populated each value
-     * ('import', 'ai', 'ocr', 'human') for zm Value.confidence.
+     * @param list<array{task?:string,result?:array}> $completed
      */
-    final class MediaEnrichment
+    public static function fromCompleted(array $completed): self
     {
-        // ── Identity ──────────────────────────────────────────────────────────────
-
-        public ?string $id          = null;  // normalized record id / ark_id
-        public ?string $sourceUrl   = null;  // original URL submitted to mediary
-        public ?string $contentType = null;  // ContentType constant (photograph, map, etc.)
-        public ?string $aggregator  = null;  // dc, pp, fortepan, etc.
-
-        // ── Stage 1: Source metadata (DC / PP / Fortepan etc.) ───────────────────
-
-        /** dcterms:title — from source or AI */
-        public ?string $title        = null;
-        public string  $titleSource  = 'import';
-
-        /** dcterms:description */
-        public ?string $description       = null;
-        public string  $descriptionSource = 'import';
-
-        /** dcterms:date */
-        public ?string $date       = null;
-        public string  $dateSource = 'import';
-
-        /** dcterms:creator — array of names */
-        public ?array $creators      = null;
-        public string $creatorsSource = 'import';
-
-        /** dcterms:subject — array of terms */
-        public ?array $subjects      = null;
-        public string $subjectsSource = 'import';
-
-        /** dcterms:language */
-        public ?string $language = null;
-
-        /** schema:latitude / schema:longitude */
-        public ?float $latitude  = null;
-        public ?float $longitude = null;
-
-        /** dcterms:rights */
-        public ?string $rights    = null;
-        public ?string $rightsUri = null;
-
-        // ── Stage 2: Mediary sync ─────────────────────────────────────────────────
-
-        /** IIIF Image API base URL — use this for AI instead of downloading to S3 */
-        public ?string $iiifBase    = null;
-
-        public ?string $mediaKey    = null;  // mediary asset key
-        public ?string $mediaStatus = null;  // new, queued, downloaded, archived
-        public ?string $s3Url       = null;  // canonical S3 URL
-        public ?string $thumbUrl    = null;  // pre-sized thumbnail URL
-        public ?int    $width       = null;
-        public ?int    $height      = null;
-
-        // ── Stage 3: AI vision enrichment ────────────────────────────────────────
-
-        /** AI-generated title (fills $title if null after Stage 1) */
-        public ?string $aiTitle       = null;
-
-        /** AI-generated description */
-        public ?string $aiDescription = null;
-
-        /** AI-extracted keywords */
-        public ?array $aiKeywords = null;
-
-        /** AI-identified people */
-        public ?array $aiPeople = null;
-
-        /** AI-identified places */
-        public ?array $aiPlaces = null;
-
-        /** AI-estimated date hint when source has none */
-        public ?string $aiDateHint = null;
-
-        /** AI confidence 0-1 */
-        public float $aiConfidence = 0.0;
-
-        /**
-         * Whether the image contains readable text → run OCR pipeline.
-         * Set by AI vision task; drives Stage 4.
-         */
-        public bool $hasText = false;
-
-        // ── Stage 4: OCR ─────────────────────────────────────────────────────────
-
-        public ?string $transcription = null;
-
-        // ── Derived: effective values for zm import ───────────────────────────────
-
-        /**
-         * The best available title: source title > AI title > null.
-         * zm will use this as the dcterms:title Value.
-         */
-        public function effectiveTitle(): ?string
-        {
-            return $this->title ?? $this->aiTitle;
-        }
-
-        /**
-         * The best available description: source > AI > null.
-         */
-        public function effectiveDescription(): ?string
-        {
-            return $this->description ?? $this->aiDescription;
-        }
-
-        /**
-         * All subject terms: source subjects + AI keywords + AI places merged.
-         * @return string[]
-         */
-        public function effectiveSubjects(): array
-        {
-            return array_unique(array_filter(array_merge(
-                $this->subjects      ?? [],
-                $this->aiKeywords    ?? [],
-                $this->aiPlaces      ?? [],
-            )));
-        }
-
-        /**
-         * Best URL to send to the AI vision model.
-         *
-         * Priority:
-         *   1. iiifBase + size parameter — direct from provider's IIIF server,
-         *      cached by imgProxy so we don't hammer their server
-         *   2. thumbUrl  — pre-built by provider (Fortepan 480px, DC Azure 300px)
-         *   3. s3Url     — our archived copy (use only if nothing else available)
-         *
-         * @param int $px  Target pixel width for AI analysis (512 = low-res, cheap)
-         */
-        public function imageUrlForAi(int $px = 512): ?string
-        {
-            // IIIF: construct a properly-sized image URL directly
-            // imgProxy will cache this, so provider servers aren't hammered
-            if ($this->iiifBase) {
-                return $this->iiifBase . "/full/{$px},/0/default.jpg";
+        $byTask = [];
+        foreach ($completed as $entry) {
+            $task = $entry['task'] ?? null;
+            if (!is_string($task) || $task === '') {
+                continue;
             }
-
-            // Pre-built CDN thumbnail — good enough at 300-480px for AI
-            if ($this->thumbUrl) {
-                return $this->thumbUrl;
+            if (!isset($entry['result']) || !is_array($entry['result'])) {
+                continue;
             }
-
-            // S3 archived copy — use imgProxy for resizing
-            if ($this->s3Url) {
-                return $this->s3Url;
+            if (!empty($entry['result']['failed']) || !empty($entry['result']['skipped'])) {
+                continue;
             }
-
-            // Source URL as last resort — AI will fetch it at full size (expensive)
-            return $this->sourceUrl;
+            $byTask[$task] = $entry['result'];
         }
 
-        /**
-         * Build a map suitable for zm Value creation via field_map.yaml.
-         * Keys are dcterms field names; values are what to store.
-         *
-         * @return array<string, mixed>
-         */
-        public function toValueMap(): array
-        {
-            return array_filter([
-                'dcterms:title'       => $this->effectiveTitle(),
-                'dcterms:description' => $this->effectiveDescription(),
-                'dcterms:date'        => $this->date ?? $this->aiDateHint,
-                'dcterms:creator'     => $this->creators,
-                'dcterms:subject'     => $this->effectiveSubjects() ?: null,
-                'dcterms:language'    => $this->language,
-                'dcterms:rights'      => $this->rights,
-                'dcterms:license'     => $this->rightsUri,
-                'schema:latitude'     => $this->latitude,
-                'schema:longitude'    => $this->longitude,
-                // Media-specific (not DC but useful for zm Media entity)
-                '_mediaKey'           => $this->mediaKey,
-                '_s3Url'              => $this->s3Url,
-                '_thumbUrl'           => $this->thumbUrl,
-                '_transcription'      => $this->transcription,
-                '_contentType'        => $this->contentType,
-                '_aiPeople'           => $this->aiPeople,
-            ], static fn($v) => $v !== null && $v !== [] && $v !== '');
+        $enrich = self::arr($byTask['enrich_from_thumbnail'] ?? null);
+        $classify = self::arr($byTask['classify'] ?? null);
+        $extract = self::arr($byTask['extract_metadata'] ?? null);
+        $peoplePlaces = self::arr($byTask['people_and_places'] ?? null);
+        $keywordsTask = self::arr($byTask['keywords'] ?? null);
+        $generateTitle = self::arr($byTask['generate_title'] ?? null);
+        $contextDescription = self::arr($byTask['context_description'] ?? null);
+        $basicDescription = self::arr($byTask['basic_description'] ?? null);
+        $summarize = self::arr($byTask['summarize'] ?? null);
+        $ocrMistral = self::arr($byTask['ocr_mistral'] ?? null);
+        $ocr = self::arr($byTask['ocr'] ?? null);
+        $handwriting = self::arr($byTask['transcribe_handwriting'] ?? null);
+
+        $imageUrl = self::string($enrich['_debug']['image_url'] ?? null)
+            ?? self::string($contextDescription['_debug']['image_url'] ?? null)
+            ?? self::string($basicDescription['_debug']['image_url'] ?? null);
+
+        $imageSource = self::string($enrich['_debug']['image_source'] ?? null)
+            ?? self::string($contextDescription['_debug']['image_source'] ?? null)
+            ?? self::string($basicDescription['_debug']['image_source'] ?? null);
+
+        $hasText = self::bool($enrich['has_text'] ?? null);
+        if ($hasText === null) {
+            $hasText = self::string($ocrMistral['text'] ?? null) !== null
+                || self::string($ocr['text'] ?? null) !== null
+                || self::string($handwriting['text'] ?? null) !== null;
         }
 
-        // ── Factories ─────────────────────────────────────────────────────────────
-
-        /**
-         * Stage 1: populate from a normalized JSONL record.
-         */
-        public static function fromNormalized(array $row): self
-        {
-            $e = new self();
-            $e->id          = $row['id']           ?? $row['ark_id'] ?? null;
-            $e->sourceUrl   = $row['url']           ?? $row['page_url'] ?? null;
-            $e->contentType = $row['content_type']  ?? null;
-            $e->aggregator  = $row['aggregator']    ?? null;
-            $e->title       = $row['title']         ?? $row['label'] ?? null;
-            $e->description = $row['description']   ?? $row['location_caption'] ?? null;
-            $e->date        = $row['date']          ?? (string)($row['year'] ?? '') ?: null;
-            $e->creators    = $row['creators']      ?? ($row['name_facet'] ?? null);
-            $e->subjects    = $row['subject_facet'] ?? ($row['subjects'] ?? ($row['tags'] ?? null));
-            $e->language    = $row['language']      ?? null;
-            $e->latitude    = isset($row['latitude'])  ? (float)$row['latitude']  : null;
-            $e->longitude   = isset($row['longitude']) ? (float)$row['longitude'] : null;
-            $e->rights      = $row['rights']        ?? $row['license'] ?? null;
-            $e->rightsUri   = $row['rights_uri']    ?? null;
-            $e->iiifBase    = $row['iiif_base']      ?? null;
-            $e->thumbUrl    = $row['thumbnail_url'] ?? null;
-            return $e;
-        }
-
-        /**
-         * Stage 2: merge mediary sync result.
-         */
-        public function applyMediaRegistration(MediaRegistration $reg): static
-        {
-            $this->mediaKey    = $reg->mediaKey;
-            $this->mediaStatus = $reg->status;
-            $this->s3Url       = $reg->s3Url;
-            $this->thumbUrl    = $this->thumbUrl ?? $reg->smallUrl; // keep source thumb if available
-            return $this;
-        }
-
-        /**
-         * Stage 3: merge AI vision enrichment.
-         * Only fills fields that are still null after Stage 1.
-         */
-        public function applyAiEnrichment(array $aiResult): static
-        {
-            $this->aiTitle       = $aiResult['title']       ?? null;
-            $this->aiDescription = $aiResult['description'] ?? null;
-            $this->aiKeywords    = $aiResult['keywords']    ?? null;
-            $this->aiPeople      = $aiResult['people']      ?? null;
-            $this->aiPlaces      = $aiResult['places']      ?? null;
-            $this->aiDateHint    = $aiResult['date_hint']   ?? null;
-            $this->aiConfidence  = (float)($aiResult['confidence'] ?? 1.0);
-            $this->hasText       = (bool)($aiResult['has_text'] ?? false);
-
-            // Promote AI values to primary when source had nothing
-            if ($this->title === null && $this->aiTitle !== null) {
-                $this->title       = $this->aiTitle;
-                $this->titleSource = 'ai';
-            }
-            if ($this->description === null && $this->aiDescription !== null) {
-                $this->description       = $this->aiDescription;
-                $this->descriptionSource = 'ai';
-            }
-            if ($this->date === null && $this->aiDateHint !== null) {
-                $this->date       = $this->aiDateHint;
-                $this->dateSource = 'ai';
-            }
-
-            return $this;
-        }
-
-        /**
-         * Stage 4: merge OCR transcription.
-         */
-        public function applyTranscription(string $text): static
-        {
-            $this->transcription = $text;
-            // OCR text also serves as description if nothing else exists
-            if ($this->description === null && strlen($text) < 500) {
-                $this->description       = $text;
-                $this->descriptionSource = 'ocr';
-            }
-            return $this;
-        }
+        return new self(
+            title: self::string($enrich['title'] ?? null) ?? self::string($generateTitle['title'] ?? null),
+            description: self::string($enrich['description'] ?? null)
+                ?? self::string($contextDescription['description'] ?? null)
+                ?? self::string($basicDescription['description'] ?? null),
+            summary: self::string($summarize['summary'] ?? null),
+            denseSummary: self::string($enrich['dense_summary'] ?? null),
+            ocrText: self::string($ocrMistral['text'] ?? null)
+                ?? self::string($ocr['text'] ?? null)
+                ?? self::string($handwriting['text'] ?? null),
+            documentType: self::string($classify['type'] ?? null) ?? self::string($enrich['content_type'] ?? null),
+            documentSubtype: self::string($classify['subtype'] ?? null),
+            contentType: self::string($enrich['content_type'] ?? null),
+            dateHint: self::string($enrich['date_hint'] ?? null),
+            dateRange: self::string($extract['dateRange'] ?? null),
+            keywords: self::strings($enrich['keywords'] ?? null, $keywordsTask['keywords'] ?? null),
+            people: self::strings($enrich['people'] ?? null, $peoplePlaces['people'] ?? null, $extract['people'] ?? null),
+            places: self::strings($enrich['places'] ?? null, $peoplePlaces['places'] ?? null, $extract['places'] ?? null),
+            organisations: self::strings($peoplePlaces['organisations'] ?? null, $extract['organisations'] ?? null),
+            subjects: self::strings($extract['subjects'] ?? null),
+            hasText: $hasText,
+            confidence: self::float($enrich['confidence'] ?? null),
+            speculations: self::strings($enrich['speculations'] ?? null),
+            imageUrl: $imageUrl,
+            imageSource: $imageSource,
+        );
     }
+
+    /** @param array<string,mixed> $data */
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            title: self::string($data['title'] ?? null),
+            description: self::string($data['description'] ?? null),
+            summary: self::string($data['summary'] ?? null),
+            denseSummary: self::string($data['denseSummary'] ?? null),
+            ocrText: self::string($data['ocrText'] ?? null),
+            documentType: self::string($data['documentType'] ?? null),
+            documentSubtype: self::string($data['documentSubtype'] ?? null),
+            contentType: self::string($data['contentType'] ?? null),
+            dateHint: self::string($data['dateHint'] ?? null),
+            dateRange: self::string($data['dateRange'] ?? null),
+            keywords: self::strings($data['keywords'] ?? null),
+            people: self::strings($data['people'] ?? null),
+            places: self::strings($data['places'] ?? null),
+            organisations: self::strings($data['organisations'] ?? null),
+            subjects: self::strings($data['subjects'] ?? null),
+            hasText: (bool) ($data['hasText'] ?? false),
+            confidence: self::float($data['confidence'] ?? null),
+            speculations: self::strings($data['speculations'] ?? null),
+            imageUrl: self::string($data['imageUrl'] ?? null),
+            imageSource: self::string($data['imageSource'] ?? null),
+        );
+    }
+
+    /** @return array<string,mixed> */
+    public function toArray(): array
+    {
+        return [
+            'title' => $this->title,
+            'description' => $this->description,
+            'summary' => $this->summary,
+            'denseSummary' => $this->denseSummary,
+            'ocrText' => $this->ocrText,
+            'documentType' => $this->documentType,
+            'documentSubtype' => $this->documentSubtype,
+            'contentType' => $this->contentType,
+            'dateHint' => $this->dateHint,
+            'dateRange' => $this->dateRange,
+            'keywords' => $this->keywords,
+            'people' => $this->people,
+            'places' => $this->places,
+            'organisations' => $this->organisations,
+            'subjects' => $this->subjects,
+            'hasText' => $this->hasText,
+            'confidence' => $this->confidence,
+            'speculations' => $this->speculations,
+            'imageUrl' => $this->imageUrl,
+            'imageSource' => $this->imageSource,
+        ];
+    }
+
+    private static function string(mixed $value): ?string
+    {
+        return is_string($value) && trim($value) !== '' ? $value : null;
+    }
+
+    private static function bool(mixed $value): ?bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value)) {
+            return $value !== 0;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+            if (in_array($normalized, ['1', 'true', 'yes', 'y'], true)) {
+                return true;
+            }
+            if (in_array($normalized, ['0', 'false', 'no', 'n'], true)) {
+                return false;
+            }
+        }
+
+        return null;
+    }
+
+    private static function float(mixed $value): ?float
+    {
+        if (is_float($value) || is_int($value)) {
+            return (float) $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return null;
+    }
+
+    private static function arr(mixed $value): array
+    {
+        return is_array($value) ? $value : [];
+    }
+
+    /** @return string[] */
+    private static function strings(mixed ...$values): array
+    {
+        $out = [];
+        foreach ($values as $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+
+            foreach ($value as $item) {
+                if (!is_scalar($item)) {
+                    continue;
+                }
+
+                $string = trim((string) $item);
+                if ($string !== '') {
+                    $out[$string] = $string;
+                }
+            }
+        }
+
+        return array_values($out);
+    }
+}

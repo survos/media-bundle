@@ -1,0 +1,249 @@
+{#
+  MediaShow — generic show page for any entity implementing EnrichmentInterface + MediaSyncInterface.
+
+  Slots (override via anonymous component blocks):
+    app_header   — workflow strip, badges, action buttons, etc.
+    app_sections — app-specific cards injected below the Source Record (tags, OCR columns, etc.)
+
+  Props: see MediaShow.php
+#}
+{% set mediaSync = this.mediaSync() %}
+{% set aiResults = this.aiResults() %}
+{% set sourceMeta = this.sourceMeta() %}
+{% set tabId = 'ms-' ~ random() %}
+
+{# ── app header slot ─────────────────────────────────────────────────────── #}
+{% block app_header %}{% endblock %}
+
+<div class="row g-4">
+
+  {# ══ LEFT: image + metadata ════════════════════════════════════════════════ #}
+  <div class="col-12 col-lg-5">
+
+    {# Image card #}
+    <div class="card mb-3">
+      <div class="card-body p-0">
+        {% if this.hasImage() %}
+          <a href="{{ this.fullSizeUrl() }}" target="_blank" rel="noopener">
+            <img src="{{ this.imageUrl }}"
+                 alt="{{ this.imageAlt }}"
+                 class="img-fluid w-100 d-block"
+                 style="max-height:520px; object-fit:contain; background:#111; cursor:zoom-in;"
+                 loading="lazy">
+          </a>
+        {% else %}
+          <div class="text-center text-muted py-5">
+            {{ ux_icon('mdi:image-off', {height: '48px', width: '48px'}) }}
+            <div class="small mt-2">No image available</div>
+          </div>
+        {% endif %}
+      </div>
+      {% if this.hasImage() %}
+        <div class="card-footer d-flex justify-content-between align-items-center py-1 flex-wrap gap-2">
+          <div class="d-flex gap-3">
+            {% if this.iiifBase %}
+              <a href="{{ this.iiifBase }}/info.json" target="_blank" rel="noopener" class="small text-muted">IIIF info ↗</a>
+            {% elseif this.iiifInfoUrl %}
+              <a href="{{ this.iiifInfoUrl }}" target="_blank" rel="noopener" class="small text-muted">IIIF info ↗</a>
+            {% endif %}
+            {% if mediaSync and mediaSync.iiifManifest %}
+              <a href="{{ mediaSync.iiifManifest }}" target="_blank" rel="noopener" class="small text-muted">Manifest ↗</a>
+            {% endif %}
+          </div>
+          {% if this.fullSizeUrl() %}
+            <a href="{{ this.fullSizeUrl() }}" target="_blank" rel="noopener" class="small">Full size ↗</a>
+          {% endif %}
+        </div>
+      {% endif %}
+      {# Compact title/description below image — no scrolling needed #}
+      {% set displayTitle = mediaSync.title ?? this.imageAlt %}
+      {% set displayDesc  = mediaSync.description ?? null %}
+      {% if displayTitle or displayDesc %}
+        <div class="card-body border-top py-2 small">
+          {% if displayTitle %}<div class="fw-semibold">{{ displayTitle }}</div>{% endif %}
+          {% if displayDesc %}<div class="text-muted mt-1">{{ displayDesc }}</div>{% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    {# app-specific left-column sections #}
+    {% block app_sections %}{% endblock %}
+
+  </div>{# /col-lg-5 #}
+
+  {# ══ RIGHT: tabbed AI/metadata panel ══════════════════════════════════════ #}
+  <div class="col-12 col-lg-7">
+
+    {# Tabbed card #}
+    <div class="card">
+      <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" id="{{ tabId }}-nav" role="tablist">
+          <li class="nav-item">
+            <a href="#{{ tabId }}-ocr"
+               class="nav-link {{ activeTab == 'ocr' ? 'active' : '' }}"
+               data-bs-toggle="tab" data-tab-id="ocr">OCR</a>
+          </li>
+          <li class="nav-item">
+            <a href="#{{ tabId }}-source"
+               class="nav-link {{ activeTab == 'source_metadata' ? 'active' : '' }}"
+               data-bs-toggle="tab" data-tab-id="source_metadata">Source Metadata</a>
+          </li>
+          <li class="nav-item">
+            <a href="#{{ tabId }}-ai"
+               class="nav-link {{ activeTab == 'ai_metadata' ? 'active' : '' }}"
+               data-bs-toggle="tab" data-tab-id="ai_metadata">AI Metadata</a>
+          </li>
+          <li class="nav-item">
+            <a href="#{{ tabId }}-tasks"
+               class="nav-link {{ activeTab == 'ai_task_results' ? 'active' : '' }}"
+               data-bs-toggle="tab" data-tab-id="ai_task_results">Task Results</a>
+          </li>
+          {% if taskRoute %}
+          <li class="nav-item">
+            <a href="#{{ tabId }}-pipelines"
+               class="nav-link {{ activeTab == 'pipelines' ? 'active' : '' }}"
+               data-bs-toggle="tab" data-tab-id="pipelines">AI Pipelines</a>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+      <div class="card-body">
+        <div class="tab-content">
+
+          {# OCR #}
+          <div id="{{ tabId }}-ocr" class="tab-pane {{ activeTab == 'ocr' ? 'active show' : '' }}" role="tabpanel">
+            <twig:AiMetadata :results="aiResults" group="ocr" />
+          </div>
+
+          {# Source Metadata — MediaSync record takes priority; sourceMeta shown as extra fields #}
+          <div id="{{ tabId }}-source" class="tab-pane {{ activeTab == 'source_metadata' ? 'active show' : '' }}" role="tabpanel">
+            {% if mediaSync %}
+              <table class="table table-sm table-borderless mb-0">
+                <tbody>
+                  {% if mediaSync.aggregator %}
+                    <tr>
+                      <th class="text-muted fw-normal ps-2" style="width:38%">Aggregator</th>
+                      <td><span class="badge text-bg-secondary font-monospace">{{ mediaSync.aggregator }}</span></td>
+                    </tr>
+                  {% endif %}
+                  {% if mediaSync.institution %}
+                    <tr><th class="text-muted fw-normal ps-2">Institution</th><td>{{ mediaSync.institution }}</td></tr>
+                  {% endif %}
+                  {% if mediaSync.collection %}
+                    <tr><th class="text-muted fw-normal ps-2">Collection</th><td>{{ mediaSync.collection|join(', ') }}</td></tr>
+                  {% endif %}
+                  {% if mediaSync.date %}
+                    <tr><th class="text-muted fw-normal ps-2">Date</th><td class="font-monospace">{{ mediaSync.date }}</td></tr>
+                  {% endif %}
+                  {% if mediaSync.type %}
+                    <tr><th class="text-muted fw-normal ps-2">Type</th><td>{{ mediaSync.type }}</td></tr>
+                  {% endif %}
+                  {% if mediaSync.creator %}
+                    <tr><th class="text-muted fw-normal ps-2">Creator</th><td>{{ mediaSync.creator|join('; ') }}</td></tr>
+                  {% endif %}
+                  {% if mediaSync.subject %}
+                    <tr>
+                      <th class="text-muted fw-normal ps-2">Subjects</th>
+                      <td>{% for s in mediaSync.subject %}<span class="badge text-bg-light border me-1">{{ s }}</span>{% endfor %}</td>
+                    </tr>
+                  {% endif %}
+                  {% if mediaSync.rights %}
+                    <tr><th class="text-muted fw-normal ps-2">Rights</th><td class="small">{{ mediaSync.rights }}</td></tr>
+                  {% endif %}
+                  {% if mediaSync.sourceUrl %}
+                    <tr>
+                      <th class="text-muted fw-normal ps-2">Source</th>
+                      <td><a href="{{ mediaSync.sourceUrl }}" target="_blank" rel="noopener" class="small">View at institution ↗</a></td>
+                    </tr>
+                  {% endif %}
+                  {% if mediaSync.iiifManifest %}
+                    <tr>
+                      <th class="text-muted fw-normal ps-2">IIIF Manifest</th>
+                      <td><a href="{{ mediaSync.iiifManifest }}" target="_blank" rel="noopener" class="small">manifest ↗</a></td>
+                    </tr>
+                  {% endif %}
+                  {% if mediaSync.sourceArk %}
+                    <tr><th class="text-muted fw-normal ps-2">ARK</th><td class="font-monospace small">{{ mediaSync.sourceArk }}</td></tr>
+                  {% endif %}
+                  {# Extra geo/import fields from sourceMeta not in MediaSync #}
+                  {% for key, val in sourceMeta %}
+                    {% if key not in ['dcterms:title','dcterms:description','dcterms:date','dcterms:creator',
+                                      'dcterms:subject','dcterms:isPartOf','dcterms:publisher','dcterms:rights',
+                                      'dcterms:source','rights','license_uri','reuse_allowed','content_type'] and val %}
+                      <tr>
+                        <th class="text-muted fw-normal ps-2 small">{{ key|replace({'dcterms:':'','schema:':'',' ':'_'})|title }}</th>
+                        <td class="small">{{ val is iterable ? val|join(', ') : val }}</td>
+                      </tr>
+                    {% endif %}
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% elseif sourceMeta is not empty %}
+              <twig:SourceMetadata :ctx="sourceMeta" />
+            {% else %}
+              <div class="text-muted small p-2">No source metadata.</div>
+            {% endif %}
+          </div>
+
+          {# AI Metadata #}
+          <div id="{{ tabId }}-ai" class="tab-pane {{ activeTab == 'ai_metadata' ? 'active show' : '' }}" role="tabpanel">
+            <twig:AiMetadata :results="aiResults" group="image" />
+          </div>
+
+          {# Raw task results #}
+          <div id="{{ tabId }}-tasks" class="tab-pane {{ activeTab == 'ai_task_results' ? 'active show' : '' }}" role="tabpanel">
+            {% if aiResults is empty %}
+              <div class="text-muted small">No task results yet.</div>
+            {% else %}
+              {% for task, result in aiResults %}
+                <div class="border rounded p-2 mb-2">
+                  <div class="fw-semibold small">{{ task }}</div>
+                  {% set debug = result._debug ?? null %}
+                  {% if debug %}
+                    <div class="small text-muted">
+                      {{ debug.image_source ?? '' }}
+                      {% if debug.meta.model ?? false %} · {{ debug.meta.model }}{% endif %}
+                      {% if result._tokens.total ?? false %} · {{ result._tokens.total }} tokens{% endif %}
+                    </div>
+                  {% endif %}
+                  <pre class="small mb-0 mt-1" style="white-space:pre-wrap;max-height:200px;overflow-y:auto;">{{ result|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+
+          {# AI Pipelines #}
+          {% if taskRoute %}
+          <div id="{{ tabId }}-pipelines" class="tab-pane {{ activeTab == 'pipelines' ? 'active show' : '' }}" role="tabpanel">
+            <twig:PipelineActions
+              :entity="this.entity"
+              taskRoute="{{ taskRoute }}"
+              pipelineRoute="{{ pipelineRoute }}"
+              :routeParams="routeParams"
+            />
+          </div>
+          {% endif %}
+
+        </div>{# /tab-content #}
+      </div>{# /card-body #}
+    </div>{# /card #}
+
+    {# Hash-routing: activate tab from URL fragment, persist on tab change #}
+    <script>
+    (function () {
+      var nav = document.getElementById({{ (tabId ~ '-nav')|json_encode|raw }});
+      if (!nav) return;
+      var hash = location.hash.slice(1);
+      if (hash) {
+        var link = nav.querySelector('[data-tab-id="' + hash + '"]');
+        if (link) link.click();
+      }
+      nav.addEventListener('shown.bs.tab', function (e) {
+        var id = e.target.getAttribute('data-tab-id');
+        if (id) history.replaceState(null, '', '#' + id);
+      });
+    })();
+    </script>
+
+  </div>{# /col-lg-7 #}
+</div>{# /row #}

@@ -6,6 +6,7 @@ namespace Survos\MediaBundle\Trait;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Survos\MediaBundle\Dto\MediaEnrichment;
 use Survos\MeiliBundle\Metadata\Facet;
 use Symfony\Component\Serializer\Attribute\Groups;
 
@@ -226,5 +227,21 @@ trait HasEnrichmentTrait
     public function isEnriched(): bool
     {
         return $this->getEnrichment() !== [];
+    }
+
+    /**
+     * Typed aggregate of all AI task results — suitable for the MediaShow
+     * "Media Enrichment" display tab and for zm import value mapping.
+     *
+     * Built from aiCompleted[] (the per-task log column). Falls back to null
+     * when no tasks have completed yet.
+     */
+    public function getMediaEnrichmentDto(): ?MediaEnrichment
+    {
+        $completed = $this->aiCompleted ?? [];
+        if ($completed === []) {
+            return null;
+        }
+        return MediaEnrichment::fromCompleted($completed);
     }
 }

@@ -155,6 +155,7 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
             foreach ([
                 \Survos\MediaBundle\Twig\Components\SourceMetadata::class,
                 \Survos\MediaBundle\Twig\Components\AiMetadata::class,
+                \Survos\MediaBundle\Twig\Components\MediaShow::class,
             ] as $componentClass) {
                 if (class_exists($componentClass)) {
                     $builder->register($componentClass)

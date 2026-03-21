@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Survos\MediaBundle\Service;
 
 use Survos\MediaBundle\Dto\BatchDispatchResult;
-use Survos\MediaBundle\Dto\MediaEnrichment;
+use Survos\MediaBundle\Dto\ImportEnrichmentContext;
 use Survos\MediaBundle\Dto\MediaProbeResult;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -19,13 +19,13 @@ final class MediaBatchDispatcher
     }
 
     /**
-     * Dispatch a batch of MediaEnrichment DTOs to mediary.
+     * Dispatch a batch of ImportEnrichmentContext DTOs to mediary.
      *
      * Sends the full toValueMap() output as context for each URL so mediary
      * stores dcterms:title, dcterms:subject, content_type, etc. in sourceMeta.
      * This replaces ad-hoc aiTasks lists — the DTO's null fields drive what AI fills.
      *
-     * @param MediaEnrichment[] $enrichments  keyed by image URL (or imageUrlForAi())
+     * @param ImportEnrichmentContext[] $enrichments  keyed by image URL (or imageUrlForAi())
      */
     public function dispatchEnrichments(string $client, array $enrichments, array $extra = []): BatchDispatchResult
     {
