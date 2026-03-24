@@ -30,6 +30,15 @@ use Symfony\AI\Platform\Contract\JsonSchema\Attribute\With;
  */
 final class MediaSyncItem
 {
+    #[Map(source: 'tenant')]
+    public ?string $tenant = null;
+
+    #[Map(source: 'dataset_key')]
+    public ?string $datasetKey = null;
+
+    #[Map(source: 'code')]
+    public mixed $code = null;
+
     // ── Image URL (derived in afterMap) ───────────────────────────────────
 
     /**
@@ -210,6 +219,14 @@ final class MediaSyncItem
      */
     public function afterMap(array &$mapped, array $original): void
     {
+        if ($this->code === null) {
+            $this->code = $original['code'] ?? $original['id'] ?? null;
+        }
+        if ($this->code !== null && $this->code !== '') {
+            $this->code = (string) $this->code;
+            $mapped['code'] = $this->code;
+        }
+
         // Derive the image URL from iiif_base (preferred) or thumbnail_url fallback.
         // Use /full/max/0/default.jpg — "max" is the IIIF standard for the largest
         // available size the server will serve. Never triggers upsizing errors unlike
@@ -266,6 +283,9 @@ final class MediaSyncItem
             // Identity
             'source_ark'                => $this->sourceArk,
             'source_id'                 => $this->sourceId,
+            'tenant'                    => $this->tenant,
+            'dataset_key'               => $this->datasetKey,
+            'code'                      => $this->code,
             'aggregator'                => $this->aggregator,
             // DC fields — dcterms: keyed so context blob is queryable by RDF term
             DcTerms::TITLE->value       => $this->title,
@@ -292,6 +312,9 @@ final class MediaSyncItem
     public static function fromArray(array $data): self
     {
         $item = new self();
+        $item->tenant = $data['tenant'] ?? null;
+        $item->datasetKey = $data['datasetKey'] ?? $data['dataset_key'] ?? null;
+        $item->code = $data['code'] ?? null;
         $item->url = $data['url'] ?? null;
         $item->reuseAllowed = $data['reuseAllowed'] ?? $data['reuse_allowed'] ?? null;
         $item->rights = $data['rights'] ?? null;
@@ -322,6 +345,9 @@ final class MediaSyncItem
     public function toArray(): array
     {
         return array_filter([
+            'tenant'         => $this->tenant,
+            'datasetKey'     => $this->datasetKey,
+            'code'           => $this->code,
             'url'            => $this->url,
             'reuseAllowed'   => $this->reuseAllowed,
             'rights'        => $this->rights,
@@ -342,6 +368,23 @@ final class MediaSyncItem
             'thumbnailUrl'  => $this->thumbnailUrl,
             'sourceUrl'     => $this->sourceUrl,
         ], static fn($v) => $v !== null && $v !== [] && $v !== '');
+    }
+
+    public function preferredUrl(): ?string
+    {
+        if ($this->url !== null && $this->url !== '') {
+            return $this->url;
+        }
+
+        if ($this->iiifBase !== null && $this->iiifBase !== '') {
+            return $this->iiifBase . '/full/max/0/default.jpg';
+        }
+
+        if ($this->thumbnailUrl !== null && $this->thumbnailUrl !== '') {
+            return $this->thumbnailUrl;
+        }
+
+        return null;
     }
 
     // ── Private helpers ───────────────────────────────────────────────────

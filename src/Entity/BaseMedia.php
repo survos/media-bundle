@@ -27,13 +27,13 @@ abstract class BaseMedia
     public string $status;
 
     #[ORM\Column(length: 100, nullable: true)]
-    public ?string $provider;
+    public ?string $provider = null;
 
     #[ORM\Column(length: 255, nullable: true)]
-    public ?string $externalId;
+    public ?string $externalId = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    public ?string $externalUrl;
+    public ?string $externalUrl = null;
 
     #[ORM\Column(type: Types::JSON)]
     public array $rawData = [];
@@ -42,46 +42,46 @@ abstract class BaseMedia
     public readonly \DateTimeImmutable $createdAt;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    public ?\DateTimeImmutable $updatedAt;
+    public ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    public ?\DateTimeImmutable $publishedAt;
+    public ?\DateTimeImmutable $publishedAt = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    public ?string $s3Url;
+    public ?string $s3Url = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    public ?string $smallUrl;
+    public ?string $smallUrl = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    public ?string $storageKey;
+    public ?string $storageKey = null;
 
     #[ORM\Column(type: Types::JSON, nullable: true)]
-    public ?array $location;
+    public ?array $location = null;
 
     #[ORM\Column(type: Types::JSON)]
     public array $tags = [];
 
     #[ORM\Column(type: Types::INTEGER, nullable: true)]
-    public ?int $width;
+    public ?int $width = null;
 
     #[ORM\Column(type: Types::INTEGER, nullable: true)]
-    public ?int $height;
+    public ?int $height = null;
 
     #[ORM\Column(type: Types::INTEGER, nullable: true)]
-    public ?int $duration;
+    public ?int $duration = null;
 
     #[ORM\Column(type: Types::BIGINT, nullable: true)]
-    public ?int $fileSize;
+    public ?int $fileSize = null;
 
     #[ORM\Column(length: 100, nullable: true)]
-    public ?string $mimeType;
+    public ?string $mimeType = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    public ?string $title;
+    public ?string $title = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    public ?string $description;
+    public ?string $description = null;
 
     public function __construct(string $id, ?string $code = null, ?string $provider = null, ?string $externalId = null)
     {

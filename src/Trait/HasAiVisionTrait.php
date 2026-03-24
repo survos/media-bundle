@@ -70,6 +70,8 @@ trait HasAiVisionTrait
     {
         return $this->getAiResult('ocr')['text']
             ?? $this->getAiResult('ocr_mistral')['text']
+            ?? $this->getAiResult('transcribe_handwriting')['text']
+            ?? $this->getAiResult('transcribe_handwriting')['transcription']
             ?? null;
     }
 

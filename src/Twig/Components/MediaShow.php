@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Survos\MediaBundle\Twig\Components;
 
 use Survos\MediaBundle\Dto\MediaSyncItem;
+use Survos\MediaBundle\Dto\MediaEnrichment;
 use Survos\MediaBundle\Interface\EnrichmentInterface;
 use Survos\MediaBundle\Interface\MediaSyncInterface;
 use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
@@ -90,6 +91,11 @@ final class MediaShow
     public function sourceMeta(): array
     {
         return $this->entity->getSourceMeta();
+    }
+
+    public function mediaEnrichment(): ?MediaEnrichment
+    {
+        return $this->entity->getMediaEnrichmentDto();
     }
 
     /** True when there's anything to show in the image card. */

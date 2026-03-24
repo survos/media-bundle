@@ -94,7 +94,8 @@ final class MediaEnrichment
             denseSummary: self::string($enrich['dense_summary'] ?? null),
             ocrText: self::string($ocrMistral['text'] ?? null)
                 ?? self::string($ocr['text'] ?? null)
-                ?? self::string($handwriting['text'] ?? null),
+                ?? self::string($handwriting['text'] ?? null)
+                ?? self::string($handwriting['transcription'] ?? null),
             documentType: self::string($classify['type'] ?? null) ?? self::string($enrich['content_type'] ?? null),
             documentSubtype: self::string($classify['subtype'] ?? null),
             contentType: self::string($enrich['content_type'] ?? null),

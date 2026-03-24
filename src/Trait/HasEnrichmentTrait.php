@@ -36,7 +36,211 @@ trait HasEnrichmentTrait
 
     public function getEnrichment(): array
     {
-        return $this->defaults['enrich_from_thumbnail'] ?? [];
+        $stored = $this->defaults['enrich_from_thumbnail'] ?? null;
+        if (is_array($stored) && $stored !== []) {
+            return $this->normalizeEnrichmentPayload($stored);
+        }
+
+        foreach ($this->aiCompleted ?? [] as $entry) {
+            if (($entry['task'] ?? null) !== 'enrich_from_thumbnail') {
+                continue;
+            }
+
+            $result = $entry['result'] ?? null;
+            if (is_array($result) && $result !== []) {
+                return $this->normalizeEnrichmentPayload($result);
+            }
+        }
+
+        $dto = $this->getMediaEnrichmentDto();
+        if ($dto === null) {
+            return [];
+        }
+
+        return array_filter([
+            'title' => $dto->title,
+            'description' => $dto->description,
+            'dense_summary' => $dto->denseSummary ?? $dto->summary,
+            'content_type' => $dto->contentType ?? $dto->documentType,
+            'date_hint' => $dto->dateHint,
+            'keywords' => $dto->keywords,
+            'keywords_high' => $dto->keywords,
+            'people' => $dto->people,
+            'places' => $dto->places,
+            'has_text' => $dto->hasText ? true : null,
+            'confidence' => $dto->confidence,
+            'speculations' => $dto->speculations,
+        ], static fn(mixed $value): bool => $value !== null && $value !== [] && $value !== false);
+    }
+
+    /**
+     * Normalize enrich_from_thumbnail data into the canonical shape consumed by
+     * computed getters, regardless of whether it came from defaults or aiCompleted.
+     *
+     * @param array<string,mixed> $enrich
+     * @return array<string,mixed>
+     */
+    private function normalizeEnrichmentPayload(array $enrich): array
+    {
+        $keywordEntries = array_merge(
+            $this->normalizeKeywordEntries($enrich['keywords'] ?? null, 'medium'),
+            $this->normalizeKeywordEntries($enrich['keywords_high'] ?? null, 'high'),
+            $this->normalizeKeywordEntries($enrich['keywords_medium'] ?? null, 'medium'),
+            $this->normalizeKeywordEntries($enrich['keywords_low'] ?? null, 'low'),
+        );
+
+        $keywordEntries = $this->dedupeKeywordEntries($keywordEntries);
+
+        $enrich['keywords'] = $keywordEntries;
+        $enrich['keywords_high'] = $this->keywordTermsForConfidence($keywordEntries, 'high');
+        $enrich['keywords_medium'] = $this->keywordTermsForConfidence($keywordEntries, 'medium');
+        $enrich['keywords_low'] = $this->keywordTermsForConfidence($keywordEntries, 'low');
+
+        return $enrich;
+    }
+
+    /**
+     * @return list<array{term:string,confidence:string,basis:?string}>
+     */
+    private function normalizeKeywordEntries(mixed $keywords, string $defaultConfidence): array
+    {
+        if (!is_array($keywords) || $keywords === []) {
+            return [];
+        }
+
+        $entries = [];
+
+        if ($this->looksLikeTripletKeywords($keywords)) {
+            for ($i = 0; $i < count($keywords); $i += 3) {
+                $term = trim((string) $keywords[$i]);
+                $confidence = $this->normalizeKeywordConfidence($keywords[$i + 1] ?? $defaultConfidence, $defaultConfidence);
+                $basis = trim((string) ($keywords[$i + 2] ?? ''));
+                if ($term !== '') {
+                    $entries[] = [
+                        'term' => $term,
+                        'confidence' => $confidence,
+                        'basis' => $basis !== '' ? $basis : null,
+                    ];
+                }
+            }
+
+            return $entries;
+        }
+
+        foreach ($keywords as $keyword) {
+            if (is_string($keyword) || is_numeric($keyword)) {
+                $term = trim((string) $keyword);
+                if ($term !== '') {
+                    $entries[] = [
+                        'term' => $term,
+                        'confidence' => $defaultConfidence,
+                        'basis' => null,
+                    ];
+                }
+                continue;
+            }
+
+            if (!is_array($keyword)) {
+                continue;
+            }
+
+            $term = trim((string) ($keyword['term'] ?? $keyword['keyword'] ?? $keyword['name'] ?? ''));
+            if ($term === '') {
+                continue;
+            }
+
+            $basis = $keyword['basis'] ?? null;
+            $entries[] = [
+                'term' => $term,
+                'confidence' => $this->normalizeKeywordConfidence($keyword['confidence'] ?? $defaultConfidence, $defaultConfidence),
+                'basis' => is_string($basis) && trim($basis) !== '' ? trim($basis) : null,
+            ];
+        }
+
+        return $entries;
+    }
+
+    /**
+     * @param list<mixed> $keywords
+     */
+    private function looksLikeTripletKeywords(array $keywords): bool
+    {
+        if (!array_is_list($keywords) || count($keywords) < 3 || count($keywords) % 3 !== 0) {
+            return false;
+        }
+
+        for ($i = 1; $i < count($keywords); $i += 3) {
+            if (!is_string($keywords[$i])) {
+                return false;
+            }
+
+            if (!in_array(strtolower(trim($keywords[$i])), ['high', 'medium', 'low'], true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function normalizeKeywordConfidence(mixed $confidence, string $fallback): string
+    {
+        $normalized = is_string($confidence) ? strtolower(trim($confidence)) : '';
+
+        return in_array($normalized, ['high', 'medium', 'low'], true)
+            ? $normalized
+            : $fallback;
+    }
+
+    /**
+     * @param list<array{term:string,confidence:string,basis:?string}> $entries
+     * @return list<array{term:string,confidence:string,basis:?string}>
+     */
+    private function dedupeKeywordEntries(array $entries): array
+    {
+        $deduped = [];
+
+        foreach ($entries as $entry) {
+            $key = strtolower($entry['term']);
+            if (!isset($deduped[$key])) {
+                $deduped[$key] = $entry;
+                continue;
+            }
+
+            if ($deduped[$key]['basis'] === null && $entry['basis'] !== null) {
+                $deduped[$key]['basis'] = $entry['basis'];
+            }
+
+            if ($this->keywordConfidenceRank($entry['confidence']) > $this->keywordConfidenceRank($deduped[$key]['confidence'])) {
+                $deduped[$key]['confidence'] = $entry['confidence'];
+            }
+        }
+
+        return array_values($deduped);
+    }
+
+    private function keywordConfidenceRank(string $confidence): int
+    {
+        return match ($confidence) {
+            'high' => 3,
+            'medium' => 2,
+            'low' => 1,
+            default => 0,
+        };
+    }
+
+    /**
+     * @param list<array{term:string,confidence:string,basis:?string}> $entries
+     * @return string[]
+     */
+    private function keywordTermsForConfidence(array $entries, string $confidence): array
+    {
+        return array_values(array_map(
+            static fn(array $entry): string => $entry['term'],
+            array_values(array_filter(
+                $entries,
+                static fn(array $entry): bool => $entry['confidence'] === $confidence
+            ))
+        ));
     }
 
     /**

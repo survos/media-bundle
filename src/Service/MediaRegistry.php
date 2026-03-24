@@ -6,6 +6,7 @@ namespace Survos\MediaBundle\Service;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 use RuntimeException;
+use Survos\MediaBundle\Dto\MediaSyncItem;
 use Survos\MediaBundle\Entity\BaseMedia;
 use Survos\MediaBundle\Entity\Photo;
 use Survos\MediaBundle\Util\MediaIdentity;
@@ -81,6 +82,31 @@ final class MediaRegistry
         }
 
         throw new InvalidArgumentException('Unsupported media source type.');
+    }
+
+    public function ensureSyncItem(MediaSyncItem $item, ?string $class = null, bool $flush = false): BaseMedia
+    {
+        $class ??= Photo::class;
+        $url = $item->preferredUrl();
+
+        if ($url === null) {
+            throw new InvalidArgumentException('MediaSyncItem must have an iiifManifest-resolved image URL, iiifBase, or thumbnailUrl.');
+        }
+
+        /** @var BaseMedia $media */
+        $media = $this->ensureMedia($url, $class, flush: false);
+        $media->provider = $item->aggregator ?? $media->provider;
+        $media->externalId = $item->sourceId ?? $item->code ?? $media->externalId;
+        $media->title = $item->title ?? $media->title;
+        $media->description = $item->description ?? $media->description;
+        $media->rawData = array_merge($media->rawData, $item->toSourceMetaArray(), $item->toArray());
+        $media->updatedAt = new \DateTimeImmutable();
+
+        if ($flush) {
+            $this->entityManager->flush();
+        }
+
+        return $media;
     }
 
     public function flush(): void
