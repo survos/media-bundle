@@ -80,6 +80,9 @@ public ?string $rightsUri = null;
 /** IIIF Image API base URL — use this for AI instead of downloading to S3 */
 public ?string $iiifBase    = null;
 
+/** Source image URL (original image or archive URL) */
+public ?string $imageUrl    = null;
+
 public ?string $mediaKey    = null;  // mediary asset key
 public ?string $mediaStatus = null;  // new, queued, downloaded, archived
 public ?string $s3Url       = null;  // canonical S3 URL
@@ -155,11 +158,12 @@ $this->aiPlaces      ?? [],
 /**
 * Best URL to send to the AI vision model.
 *
-* Priority:
-*   1. iiifBase + size parameter — direct from provider's IIIF server,
-*      cached by imgProxy so we don't hammer their server
-*   2. thumbUrl  — pre-built by provider (Fortepan 480px, DC Azure 300px)
-*   3. s3Url     — our archived copy (use only if nothing else available)
+ * Priority:
+ *   1. iiifBase + size parameter — direct from provider's IIIF server,
+ *      cached by imgProxy so we don't hammer their server
+ *   2. imageUrl  — original image URL, cached by imgProxy
+ *   3. thumbUrl  — pre-built by provider (fallback only)
+ *   4. s3Url     — our archived copy (use only if nothing else available)
 *
 * @param int $px  Target pixel width for AI analysis (512 = low-res, cheap)
 */
@@ -169,6 +173,10 @@ public function imageUrlForAi(int $px = 512): ?string
 // imgProxy will cache this, so provider servers aren't hammered
 if ($this->iiifBase) {
 return $this->iiifBase . "/full/{$px},/0/default.jpg";
+}
+
+if ($this->imageUrl) {
+return $this->imageUrl;
 }
 
 // Pre-built CDN thumbnail — good enough at 300-480px for AI
@@ -208,6 +216,7 @@ return array_filter([
 '_mediaKey'           => $this->mediaKey,
 '_s3Url'              => $this->s3Url,
 '_thumbUrl'           => $this->thumbUrl,
+'_imageUrl'           => $this->imageUrl,
 '_transcription'      => $this->transcription,
 '_contentType'        => $this->contentType,
 '_aiPeople'           => $this->aiPeople,
@@ -237,6 +246,7 @@ $e->longitude   = isset($row['longitude']) ? (float)$row['longitude'] : null;
 $e->rights      = $row['rights']        ?? $row['license'] ?? null;
 $e->rightsUri   = $row['rights_uri']    ?? null;
 $e->iiifBase    = $row['iiif_base']      ?? null;
+$e->imageUrl    = $row['image_url']      ?? ($row['imageUrl'] ?? null);
 $e->thumbUrl    = $row['thumbnail_url'] ?? null;
 return $e;
 }

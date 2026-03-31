@@ -197,6 +197,13 @@ final class MediaSyncItem
     public ?string $iiifManifest = null;
 
     /**
+     * Original source image URL. This is the preferred basis for mediary caching.
+     * @var string|null
+     */
+    #[Map(source: 'image_url')]
+    public ?string $imageUrl = null;
+
+    /**
      * Pre-built thumbnail URL (display only, not used as mediary identity).
      * @var string|null
      */
@@ -227,12 +234,14 @@ final class MediaSyncItem
             $mapped['code'] = $this->code;
         }
 
-        // Derive the image URL from iiif_base (preferred) or thumbnail_url fallback.
+        // Derive the image URL from iiif_base (preferred) or original image_url.
         // Use /full/max/0/default.jpg — "max" is the IIIF standard for the largest
         // available size the server will serve. Never triggers upsizing errors unlike
         // fixed pixel sizes (e.g. 1600,) which fail on servers that only downsize.
         if ($this->iiifBase !== null) {
             $this->url = $this->iiifBase . '/full/max/0/default.jpg';
+        } elseif ($this->imageUrl !== null) {
+            $this->url = $this->imageUrl;
         } elseif ($this->thumbnailUrl !== null) {
             $this->url = $this->thumbnailUrl;
         }
@@ -300,6 +309,7 @@ final class MediaSyncItem
             // IIIF
             'iiif_base'                 => $this->iiifBase,
             'iiif_manifest'             => $this->iiifManifest,
+            'image_url'                 => $this->imageUrl,
             'thumbnail_url'             => $this->thumbnailUrl,
         ], static fn($v) => $v !== null && $v !== [] && $v !== '');
     }
@@ -332,6 +342,7 @@ final class MediaSyncItem
         $item->collection = $data['collection'] ?? null;
         $item->iiifBase = $data['iiifBase'] ?? $data['iiif_base'] ?? null;
         $item->iiifManifest = $data['iiifManifest'] ?? $data['iiif_manifest'] ?? null;
+        $item->imageUrl = $data['imageUrl'] ?? $data['image_url'] ?? null;
         $item->thumbnailUrl = $data['thumbnailUrl'] ?? $data['thumbnail_url'] ?? null;
         $item->sourceUrl = $data['sourceUrl'] ?? $data['source_url'] ?? null;
         return $item;
@@ -365,6 +376,7 @@ final class MediaSyncItem
             'collection'    => $this->collection,
             'iiifBase'      => $this->iiifBase,
             'iiifManifest'  => $this->iiifManifest,
+            'imageUrl'      => $this->imageUrl,
             'thumbnailUrl'  => $this->thumbnailUrl,
             'sourceUrl'     => $this->sourceUrl,
         ], static fn($v) => $v !== null && $v !== [] && $v !== '');

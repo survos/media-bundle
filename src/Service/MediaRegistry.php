@@ -9,6 +9,7 @@ use RuntimeException;
 use Survos\MediaBundle\Dto\MediaSyncItem;
 use Survos\MediaBundle\Entity\BaseMedia;
 use Survos\MediaBundle\Entity\Photo;
+use Survos\MediaBundle\Service\MediaUrlGenerator;
 use Survos\MediaBundle\Util\MediaIdentity;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use SplFileInfo;
@@ -19,6 +20,7 @@ final class MediaRegistry
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly MediaUrlGenerator $mediaUrlGenerator,
     ) {
     }
 
@@ -87,10 +89,10 @@ final class MediaRegistry
     public function ensureSyncItem(MediaSyncItem $item, ?string $class = null, bool $flush = false): BaseMedia
     {
         $class ??= Photo::class;
-        $url = $item->preferredUrl();
+        $url = $item->imageUrl ?? $item->preferredUrl();
 
         if ($url === null) {
-            throw new InvalidArgumentException('MediaSyncItem must have an iiifManifest-resolved image URL, iiifBase, or thumbnailUrl.');
+            throw new InvalidArgumentException('MediaSyncItem must have an imageUrl, iiifManifest-resolved image URL, iiifBase, or thumbnailUrl.');
         }
 
         /** @var BaseMedia $media */
@@ -100,6 +102,7 @@ final class MediaRegistry
         $media->title = $item->title ?? $media->title;
         $media->description = $item->description ?? $media->description;
         $media->rawData = array_merge($media->rawData, $item->toSourceMetaArray(), $item->toArray());
+        $media->smallUrl ??= $this->mediaUrlGenerator->resizeRemote($url, preset: MediaUrlGenerator::PRESET_SMALL);
         $media->updatedAt = new \DateTimeImmutable();
 
         if ($flush) {
