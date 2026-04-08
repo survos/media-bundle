@@ -4,7 +4,15 @@
   {% macro renderValue(type, value) %}
     {% if type == 'badges' %}
       {% for v in (value is iterable ? value : [value]) %}
-        <span class="badge bg-secondary-lt me-1">{{ v }}</span>
+        <span class="badge bg-secondary-lt me-1">
+          {% if v is same as(null) %}
+            —
+          {% elseif v is iterable %}
+            {{ v|json_encode }}
+          {% else %}
+            {{ v }}
+          {% endif %}
+        </span>
       {% endfor %}
     {% elseif type == 'url' %}
       <a href="{{ value }}" target="_blank" rel="noopener" class="text-truncate d-inline-block" style="max-width:300px">
@@ -15,7 +23,13 @@
         {{ value ? 'yes' : 'no' }}
       </span>
     {% else %}
-      {{ value }}
+      {% if value is same as(null) %}
+        —
+      {% elseif value is iterable %}
+        {{ value|json_encode }}
+      {% else %}
+        {{ value }}
+      {% endif %}
     {% endif %}
   {% endmacro %}
 
