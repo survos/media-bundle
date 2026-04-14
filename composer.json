@@ -20,7 +20,7 @@
         "mperonnet/imgproxy-php": "^1.0",
         "survos/data-bundle": "^2.0",
         "survos/import-bundle": "^2.0",
-        "symfony/ux-twig-component": "^2.32"
+        "symfony/ux-twig-component": "^2.0|^3.0"
     },
     "suggest": {
         "symfony/ai-platform": "Required for #[With] JSON Schema constraints on MediaSyncItem properties"

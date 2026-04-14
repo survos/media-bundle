@@ -113,13 +113,23 @@
               <span class="badge bg-orange-lt ms-1" title="AI inference, not established fact">speculative</span>
             </div>
             {% for s in enrich.speculations %}
+              {# s may be an object {claim,confidence,basis}, a flat triplet array [claim,confidence,basis], or a plain string #}
+              {% if s is iterable %}
+                {% set sClaim      = s.claim      ?? s[0] ?? '' %}
+                {% set sConfidence = s.confidence ?? s[1] ?? null %}
+                {% set sBasis      = s.basis      ?? s[2] ?? null %}
+              {% else %}
+                {% set sClaim      = s %}
+                {% set sConfidence = null %}
+                {% set sBasis      = null %}
+              {% endif %}
               <div class="border rounded p-2 mb-1 bg-orange-lt">
-                <div>{{ s.claim }}</div>
-                {% if s.basis is defined and s.basis %}
-                  <div class="text-muted small mt-1">Basis: {{ s.basis }}</div>
+                <div>{{ sClaim }}</div>
+                {% if sBasis %}
+                  <div class="text-muted small mt-1">Basis: {{ sBasis }}</div>
                 {% endif %}
-                {% if s.confidence is defined %}
-                  <div class="text-muted small">Confidence: {{ (s.confidence * 100)|round }}%</div>
+                {% if sConfidence is not null and sConfidence is not same as(false) %}
+                  <div class="text-muted small">Confidence: {{ (sConfidence * 100)|round }}%</div>
                 {% endif %}
               </div>
             {% endfor %}
