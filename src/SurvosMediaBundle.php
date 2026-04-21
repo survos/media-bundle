@@ -7,6 +7,7 @@ use Survos\BabelBundle\Service\StringResolver;
 use Survos\MediaBundle\Provider\ProviderInterface;
 use Survos\MediaBundle\Service\ImageTaggingService;
 use Survos\MediaBundle\Service\MediaRegistry;
+use Survos\MediaBundle\Service\OcrService;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
@@ -143,7 +144,7 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
         // Import services
         $container->import('../config/services.php');
 
-         foreach ([ImageTaggingService::class, MediaRegistry::class] as $class) {
+         foreach ([ImageTaggingService::class, MediaRegistry::class, OcrService::class] as $class) {
             $builder->register($class)
                 ->setAutowired(true)
                 ->setAutoconfigured(true)

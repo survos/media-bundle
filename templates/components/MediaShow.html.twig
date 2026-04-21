@@ -84,6 +84,21 @@
                data-bs-toggle="tab" data-tab-id="ocr">OCR</a>
           </li>
           <li class="nav-item">
+            <a href="#{{ tabId }}-claims"
+               class="nav-link {{ activeTab == 'claims' ? 'active' : '' }}"
+               data-bs-toggle="tab" data-tab-id="claims">AI Claims</a>
+          </li>
+          <li class="nav-item">
+            <a href="#{{ tabId }}-htr"
+               class="nav-link {{ activeTab == 'htr' ? 'active' : '' }}"
+               data-bs-toggle="tab" data-tab-id="htr">HTR</a>
+          </li>
+          <li class="nav-item">
+            <a href="#{{ tabId }}-tags"
+               class="nav-link {{ activeTab == 'tags' ? 'active' : '' }}"
+               data-bs-toggle="tab" data-tab-id="tags">Tags</a>
+          </li>
+          <li class="nav-item">
             <a href="#{{ tabId }}-source"
                class="nav-link {{ activeTab == 'source_metadata' ? 'active' : '' }}"
                data-bs-toggle="tab" data-tab-id="source_metadata">Source Metadata</a>
@@ -125,6 +140,33 @@
               </div>
             {% endif %}
             <twig:AiMetadata :results="aiResults" group="ocr" />
+          </div>
+
+          {# AI Claims — every claim recorded for this subject, grouped by source. #}
+          <div id="{{ tabId }}-claims" class="tab-pane {{ activeTab == 'claims' ? 'active show' : '' }}" role="tabpanel">
+            <twig:AiClaimsList :subject="this.entity"/>
+          </div>
+
+          {# HTR — high-res transcribe output (Mistral OCR / handwriting / form fields / census rows).
+             Filter on the TRANSCRIBE-step sources so this tab is a clean, side-by-side alternative
+             to the AI Claims tab when comparing Tesseract vs Mistral output. #}
+          <div id="{{ tabId }}-htr" class="tab-pane {{ activeTab == 'htr' ? 'active show' : '' }}" role="tabpanel">
+            <twig:AiClaimsList
+              :subject="this.entity"
+              sources="ocr_mistral@1.0,transcribe_handwriting@1.0,extract_metadata@1.0,extract_census@1.0"
+            />
+          </div>
+
+          {# Tags — chip view of subject-like claims (keywords, people, places, speculations).
+             Confidence: high (green, no suffix), medium (amber, ?), low (gray, ??) — matches
+             the uncertainty convention in the triage prompt. Basis prints inline so the
+             operator can see *why* each tag was proposed. #}
+          <div id="{{ tabId }}-tags" class="tab-pane {{ activeTab == 'tags' ? 'active show' : '' }}" role="tabpanel">
+            <twig:AiClaimsList
+              :subject="this.entity"
+              predicates="dcterms:subject,foaf:Person,dcterms:spatial,ai:speculation"
+              layout="chips"
+            />
           </div>
 
           {# Source Metadata — MediaSync record takes priority; sourceMeta shown as extra fields #}
