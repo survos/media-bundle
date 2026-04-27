@@ -20,4 +20,11 @@ interface EnrichmentInterface
 
     /** Typed aggregate of all AI task results. Consumed by MediaShow "Media Enrichment" tab. */
     public function getMediaEnrichmentDto(): ?\Survos\MediaBundle\Dto\MediaEnrichment;
+
+    /**
+     * Best available OCR text for this entity — highest-confidence ai:ocrText claim,
+     * falling back to any stored transcript. Returns null when no OCR has run.
+     * Override in entities that carry OCR (e.g. Image). Default: null.
+     */
+    public function bestOcr(): ?string;
 }

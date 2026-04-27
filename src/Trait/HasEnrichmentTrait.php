@@ -448,4 +448,10 @@ trait HasEnrichmentTrait
         }
         return MediaEnrichment::fromCompleted($completed);
     }
+
+    /** Default: no OCR. Override in entities that carry OCR text (e.g. Image). */
+    public function bestOcr(): ?string
+    {
+        return null;
+    }
 }
