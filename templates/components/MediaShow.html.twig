@@ -84,11 +84,6 @@
                data-bs-toggle="tab" data-tab-id="ocr">Text</a>
           </li>
           <li class="nav-item">
-            <a href="#{{ tabId }}-claims"
-               class="nav-link {{ activeTab == 'claims' ? 'active' : '' }}"
-               data-bs-toggle="tab" data-tab-id="claims">AI Claims</a>
-          </li>
-          <li class="nav-item">
             <a href="#{{ tabId }}-summary"
                class="nav-link {{ activeTab == 'summary' ? 'active' : '' }}"
                data-bs-toggle="tab" data-tab-id="summary">Summary</a>
@@ -103,13 +98,18 @@
                class="nav-link {{ activeTab == 'source_metadata' ? 'active' : '' }}"
                data-bs-toggle="tab" data-tab-id="source_metadata">Source Metadata</a>
           </li>
-          {% if taskRoute %}
+          {% if taskRoute and (is_granted('TENANT_ADMIN') or is_granted('ROLE_ADMIN')) %}
           <li class="nav-item">
             <a href="#{{ tabId }}-pipelines"
                class="nav-link {{ activeTab == 'pipelines' ? 'active' : '' }}"
                data-bs-toggle="tab" data-tab-id="pipelines">AI Pipelines</a>
           </li>
           {% endif %}
+          <li class="nav-item">
+            <a href="#{{ tabId }}-claims"
+               class="nav-link {{ activeTab == 'claims' ? 'active' : '' }}"
+               data-bs-toggle="tab" data-tab-id="claims">AI Claims</a>
+          </li>
         </ul>
       </div>
       <div class="card-body">
@@ -118,11 +118,6 @@
           {# Text — OCR/HTR claims consolidated from the claims table. #}
           <div id="{{ tabId }}-ocr" class="tab-pane {{ activeTab == 'ocr' ? 'active show' : '' }}" role="tabpanel">
             <twig:AiOcrPanel :subject="this.entity"/>
-          </div>
-
-          {# AI Claims — every claim recorded for this subject, grouped by source. #}
-          <div id="{{ tabId }}-claims" class="tab-pane {{ activeTab == 'claims' ? 'active show' : '' }}" role="tabpanel">
-            <twig:AiClaimsList :subject="this.entity"/>
           </div>
 
           {# Summary — best-guess projection derived from claims only. #}
@@ -213,7 +208,7 @@
           </div>
 
           {# AI Pipelines #}
-          {% if taskRoute %}
+          {% if taskRoute and (is_granted('TENANT_ADMIN') or is_granted('ROLE_ADMIN')) %}
           <div id="{{ tabId }}-pipelines" class="tab-pane {{ activeTab == 'pipelines' ? 'active show' : '' }}" role="tabpanel">
             <twig:PipelineActions
               :entity="this.entity"
@@ -223,6 +218,14 @@
             />
           </div>
           {% endif %}
+
+          {# AI Claims — audit/debug view. Bulky text claims live in the Text tab. #}
+          <div id="{{ tabId }}-claims" class="tab-pane {{ activeTab == 'claims' ? 'active show' : '' }}" role="tabpanel">
+            <twig:AiClaimsList
+              :subject="this.entity"
+              excludePredicates="ai:ocrText,ai:htrText,ai:printedText"
+            />
+          </div>
 
         </div>{# /tab-content #}
       </div>{# /card-body #}
