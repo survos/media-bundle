@@ -28,19 +28,10 @@ use Symfony\Component\Serializer\Attribute\Groups;
  */
 trait HasEnrichmentTrait
 {
-    #[ORM\Column(type: Types::JSON, nullable: false, options: ['jsonb' => true])]
-    #[Groups(['image:read', 'enrichment:read'])]
-    public array $defaults = [];
-
     // ── Interface implementation ───────────────────────────────────────────────
 
     public function getEnrichment(): array
     {
-        $stored = $this->defaults['enrich_from_thumbnail'] ?? null;
-        if (is_array($stored) && $stored !== []) {
-            return $this->normalizeEnrichmentPayload($stored);
-        }
-
         foreach ($this->aiCompleted ?? [] as $entry) {
             if (($entry['task'] ?? null) !== 'enrich_from_thumbnail') {
                 continue;
