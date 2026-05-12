@@ -153,6 +153,9 @@ final class SyncMediaCommand
                 if ($sync) {
                     $extra['sync'] = true;
                 }
+                // media:sync publishes media and source context to mediary.
+                // Claims are projected separately so source, AI, OCR, and human
+                // metadata keep provenance instead of becoming opaque blobs.
                 $result = $this->dispatcher->dispatch($client, $urls, $extra);
                 if (!$uploadOnly) {
                     $repo->upsertFromBatchResult($result);

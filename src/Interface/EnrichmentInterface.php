@@ -15,9 +15,6 @@ interface EnrichmentInterface
 {
     public function getEnrichment(): array;
 
-    /** All AI task results keyed by task name. Consumed by AiMetadata and MediaShow components. */
-    public function getAiResults(): array;
-
     /** Source/import metadata as a dcterms:-keyed array. Consumed by SourceMetadata and MediaShow. */
     public function getSourceMeta(): array;
 

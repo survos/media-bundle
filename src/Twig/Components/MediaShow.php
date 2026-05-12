@@ -13,8 +13,7 @@ use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
  * Generic show-page component for any entity that implements
  * EnrichmentInterface + MediaSyncInterface.
  *
- * Renders: image preview, tabbed right column (OCR / Source Metadata /
- * AI Metadata / AI Task Results / Tasks), and a MediaSync source record card.
+ * Renders: image preview, claims-driven tabs, source metadata, and task controls.
  *
  * App-specific content (workflow strip, tags, etc.) goes in the
  * {% block app_header %} and {% block app_sections %} slots via
@@ -81,11 +80,6 @@ final class MediaShow
             return $this->entity->getMediaSync();
         }
         return null;
-    }
-
-    public function aiResults(): array
-    {
-        return $this->entity->getAiResults();
     }
 
     public function sourceMeta(): array

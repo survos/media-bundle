@@ -286,35 +286,6 @@ trait HasEnrichmentTrait
         return $out;
     }
 
-    /**
-     * All AI task results keyed by task name, ready for
-     * <twig:AiMetadata :results="entity.aiResults" />.
-     *
-     * Merges legacy per-task aiCompleted[] with enrich_from_thumbnail
-     * from defaults (which the pipeline stores separately).
-     *
-     * @return array<string,mixed>
-     */
-    public function getAiResults(): array
-    {
-        $results = [];
-
-        // Legacy per-task entries from aiCompleted column
-        foreach ($this->aiCompleted ?? [] as $entry) {
-            if (is_array($entry) && isset($entry['task'])) {
-                $results[$entry['task']] = $entry['result'] ?? $entry;
-            }
-        }
-
-        // enrich_from_thumbnail lives in defaults, not aiCompleted
-        $enrich = $this->defaults['enrich_from_thumbnail'] ?? null;
-        if ($enrich !== null) {
-            $results['enrich_from_thumbnail'] = $enrich;
-        }
-
-        return $results;
-    }
-
     // ── Computed top-level fields — serialized into Meili as first-class keys ──
     // Each getter reads from getEnrichment() so there is one source of truth.
     // These are NOT stored columns — they are virtual, computed on read.

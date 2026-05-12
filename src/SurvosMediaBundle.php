@@ -102,7 +102,7 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
 
      public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
      {
-         // Register bundle templates path so <twig:SourceMetadata> finds its template
+         // Register bundle templates path for media components.
          if ($builder->hasExtension('twig')) {
              $builder->prependExtensionConfig('twig', [
                  'paths' => [\dirname(__DIR__) . '/templates' => 'SurvosMedia'],
@@ -148,8 +148,6 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
         // Register Twig components
         if (class_exists(\Symfony\UX\TwigComponent\Attribute\AsTwigComponent::class)) {
             foreach ([
-                \Survos\MediaBundle\Twig\Components\SourceMetadata::class,
-                \Survos\MediaBundle\Twig\Components\AiMetadata::class,
                 \Survos\MediaBundle\Twig\Components\MediaShow::class,
             ] as $componentClass) {
                 if (class_exists($componentClass)) {

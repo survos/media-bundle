@@ -23,7 +23,10 @@ final class MediaBatchDispatcher
      *
      * Sends the full toValueMap() output as context for each URL so mediary
      * stores dcterms:title, dcterms:subject, content_type, etc. in sourceMeta.
-     * This replaces ad-hoc aiTasks lists — the DTO's null fields drive what AI fills.
+     *
+     * Claims are intentionally not folded into raw AI result blobs here. Apps
+     * should publish selected source/AI/human claims alongside media as a
+     * separate projection once the claims publishing contract is wired.
      *
      * @param ImportEnrichmentContext[] $enrichments  keyed by image URL (or imageUrlForAi())
      */
@@ -68,6 +71,9 @@ final class MediaBatchDispatcher
      */
     public function dispatch(string $client, array $urls, array $extra = []): BatchDispatchResult
     {
+        // This is the media publication boundary. Keep payloads explicit:
+        // media identity + source context now, selected claims later. Mediary
+        // may run its own AI, but those results should also become claims.
         $options = [
             'json' => array_merge([
                 'client'   => $client,

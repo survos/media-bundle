@@ -105,6 +105,13 @@ bin/console media:probe "https://example.org/image.jpg"
 bin/console media:probe --url "upload://sha256/abcd..."
 ```
 
+## Publishing Claims to Mediary
+
+Apps run AI with `survos/ai-workflow-bundle` and store tracked metadata as
+claims. Media publishing should send the image plus selected source/AI/human
+claims to mediary, while mediary remains responsible for global media access and
+canonical image URLs. See [docs/publishing.md](docs/publishing.md).
+
 ---
 
 ## What This Bundle Does *Not* Do

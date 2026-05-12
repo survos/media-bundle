@@ -21,7 +21,6 @@
     },
     "suggest": {
         "survos/imgproxy-bundle": "Signed imgproxy URL generation for remote image resizing",
-        "survos/data-contracts": "Enables SourceMetadata::dto() to hydrate typed source metadata DTOs",
         "symfony/ai-platform": "Required for #[With] JSON Schema constraints on MediaSyncItem properties"
     },
     "require-dev": {
