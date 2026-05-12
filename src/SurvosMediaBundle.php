@@ -52,14 +52,6 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
                  ->scalarNode('default_locale')->defaultValue('en')->end()
                  ->scalarNode('cache_ttl')->defaultValue(3600)->end()
                  ->booleanNode('sais_integration')->defaultTrue()->end()
-                  ->arrayNode('imgproxy')
-                      ->addDefaultsIfNotSet()
-                      ->children()
-                          ->scalarNode('base_url')->defaultValue('https://imgproxy.survos.com')->end()
-                          ->scalarNode('key')->defaultValue('%env(IMGPROXY_KEY)%')->end()
-                          ->scalarNode('salt')->defaultValue('%env(IMGPROXY_SALT)%')->end()
-                      ->end()
-                  ->end()
                  ->arrayNode('media_server')
                      ->addDefaultsIfNotSet()
                      ->children()
@@ -81,6 +73,8 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
                           'small' => ['resize' => 'fill', 'width' => 192, 'height' => 192],
                           'medium' => ['resize' => 'fit', 'width' => 400, 'height' => 400],
                           'large' => ['resize' => 'fit', 'width' => 800, 'height' => 800],
+                          'ai' => ['resize' => 'fit', 'width' => 512, 'height' => 512],
+                          'thumb' => ['resize' => 'fit', 'width' => 300, 'height' => 300],
                       ])
                   ->end()
                  ->arrayNode('providers')
@@ -176,10 +170,7 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
              ->set('survos_media.presets', $config['presets'])
              ->set('survos_media.media_server.host', $config['media_server']['host'])
              ->set('survos_media.media_server.apiKey', $config['media_server']['apiKey'])
-             ->set('survos_media.media_server.resize_path', $config['media_server']['resize_path'])
-              ->set('survos_media.imgproxy_base_url', $config['imgproxy']['base_url'])
-              ->set('survos_media.imgproxy.key', $config['imgproxy']['key'])
-              ->set('survos_media.imgproxy.salt', $config['imgproxy']['salt']);
+             ->set('survos_media.media_server.resize_path', $config['media_server']['resize_path']);
 
         // Configure providers
         foreach ($config['providers'] as $name => $providerConfig) {

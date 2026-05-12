@@ -6,25 +6,18 @@ namespace Survos\MediaBundle\Trait;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Survos\FieldBundle\Attribute\Field;
 use Survos\MediaBundle\Dto\MediaEnrichment;
-use Survos\MeiliBundle\Metadata\Facet;
 use Symfony\Component\Serializer\Attribute\Groups;
 
 /**
- * Stores enrich_from_thumbnail results in a `defaults` JSONB column and
- * exposes them as computed top-level properties for Meilisearch indexing,
- * API serialization, and faceting.
+ * Legacy enrichment helpers for the old defaults/aiCompleted storage shape.
  *
- * Usage:
- *
- *   class MyEntity implements EnrichmentInterface
- *   {
- *       use HasEnrichmentTrait;
- *   }
- *
- * The `defaults` column intentionally carries other sub-keys too (storage,
- * capture_metadata, import, etc.) — enrich_from_thumbnail is just one pocket.
- * All computed getters read from defaults['enrich_from_thumbnail'] only.
+ * @deprecated since survos/media-bundle 2.1. Store enrichment as explicit
+ * claims/DTOs instead of writing task payloads into a catch-all `defaults`
+ * JSON column. For low-resolution AI image URLs, implement
+ * Survos\ImgproxyBundle\Contract\AiThumbnailProviderInterface or use
+ * Survos\ImgproxyBundle\Service\ImgproxyUrlBuilder directly.
  */
 trait HasEnrichmentTrait
 {
@@ -360,7 +353,7 @@ trait HasEnrichmentTrait
      * Content type classifier (e.g. "object", "document", "photograph").
      * Facetable.
      */
-    #[Facet]
+    #[Field(filterable: true, facet: true)]
     #[Groups(['image:read', 'enrichment:read'])]
     public function getEnrichContentType(): ?string
     {
@@ -372,7 +365,7 @@ trait HasEnrichmentTrait
      * Whether the image contains significant text (drives OCR routing).
      * Facetable boolean.
      */
-    #[Facet]
+    #[Field(filterable: true, facet: true)]
     #[Groups(['image:read', 'enrichment:read'])]
     public function getEnrichHasText(): ?bool
     {
@@ -398,7 +391,7 @@ trait HasEnrichmentTrait
      * Estimated date hint from the AI (free text, e.g. "1940s", "ca. 1923").
      * Facetable as a string.
      */
-    #[Facet]
+    #[Field(filterable: true, facet: true)]
     #[Groups(['image:read', 'enrichment:read'])]
     public function getEnrichDateHint(): ?string
     {

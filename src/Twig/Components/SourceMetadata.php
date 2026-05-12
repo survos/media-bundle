@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Twig\Components;
 
-use Survos\DataBundle\Dto\Item\BaseItemDto;
-use Survos\DataBundle\Metadata\ContentType;
 use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 
 /**
@@ -21,6 +19,28 @@ use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 #[AsTwigComponent('SourceMetadata', template: '@SurvosMedia/components/SourceMetadata.html.twig')]
 final class SourceMetadata
 {
+    private const CONTENT_TYPE_PHOTOGRAPH = 'photograph';
+    private const CONTENT_TYPE_POSTCARD = 'postcard';
+    private const CONTENT_TYPE_NEGATIVE = 'negative';
+    private const CONTENT_TYPE_MAP = 'map';
+    private const CONTENT_TYPE_NEWSPAPER = 'newspaper';
+    private const CONTENT_TYPE_PERIODICAL = 'periodical';
+    private const CONTENT_TYPE_MANUSCRIPT = 'manuscript';
+    private const CONTENT_TYPE_CORRESPONDENCE = 'correspondence';
+    private const CONTENT_TYPE_OBJECT = 'object';
+
+    private const CONTENT_TYPE_URIS = [
+        self::CONTENT_TYPE_PHOTOGRAPH => 'http://id.loc.gov/vocabulary/graphicMaterials/tgm007965',
+        self::CONTENT_TYPE_POSTCARD => 'http://id.loc.gov/vocabulary/graphicMaterials/tgm008060',
+        self::CONTENT_TYPE_NEGATIVE => 'http://id.loc.gov/vocabulary/graphicMaterials/tgm006437',
+        self::CONTENT_TYPE_MAP => 'http://id.loc.gov/authorities/genreForms/gf2011026055',
+        self::CONTENT_TYPE_NEWSPAPER => 'http://id.loc.gov/authorities/genreForms/gf2014026139',
+        self::CONTENT_TYPE_PERIODICAL => 'http://id.loc.gov/authorities/genreForms/gf2014026156',
+        self::CONTENT_TYPE_MANUSCRIPT => 'http://id.loc.gov/authorities/genreForms/gf2022026088',
+        self::CONTENT_TYPE_CORRESPONDENCE => 'http://id.loc.gov/authorities/genreForms/gf2014026051',
+        self::CONTENT_TYPE_OBJECT => 'http://purl.org/dc/dcmitype/PhysicalObject',
+    ];
+
     /** The sourceMeta array from the Asset */
     public array $ctx = [];
 
@@ -48,39 +68,39 @@ final class SourceMetadata
     ];
 
     /**
-     * Type-specific extra fields keyed by ContentType constant.
+     * Type-specific extra fields keyed by content type slug.
      * Merged with CORE_FIELDS for display.
      */
     private const TYPE_FIELDS = [
-        ContentType::PHOTOGRAPH => [
+        self::CONTENT_TYPE_PHOTOGRAPH => [
             'dcterms:format' => ['Process/Technique', 'text'],
         ],
-        ContentType::POSTCARD => [
+        self::CONTENT_TYPE_POSTCARD => [
             'dcterms:format'  => ['Process/Technique', 'text'],
             'postmark_date'   => ['Postmark',           'text'],
         ],
-        ContentType::NEGATIVE => [
+        self::CONTENT_TYPE_NEGATIVE => [
             'dcterms:format' => ['Film Type',  'text'],
         ],
-        ContentType::MAP => [
+        self::CONTENT_TYPE_MAP => [
             'scale'       => ['Scale',       'text'],
             'projection'  => ['Projection',  'text'],
         ],
-        ContentType::NEWSPAPER => [
+        self::CONTENT_TYPE_NEWSPAPER => [
             'volume'        => ['Volume',  'text'],
             'issue_number'  => ['Issue',   'text'],
         ],
-        ContentType::PERIODICAL => [
+        self::CONTENT_TYPE_PERIODICAL => [
             'volume'        => ['Volume',  'text'],
             'issue_number'  => ['Issue',   'text'],
         ],
-        ContentType::MANUSCRIPT => [
+        self::CONTENT_TYPE_MANUSCRIPT => [
             'has_transcription' => ['Transcription', 'bool'],
         ],
-        ContentType::CORRESPONDENCE => [
+        self::CONTENT_TYPE_CORRESPONDENCE => [
             'has_transcription' => ['Transcription', 'bool'],
         ],
-        ContentType::OBJECT => [
+        self::CONTENT_TYPE_OBJECT => [
             'material'    => ['Material',   'text'],
             'technique'   => ['Technique',  'text'],
             'donor'       => ['Donor',      'text'],
@@ -96,14 +116,15 @@ final class SourceMetadata
     ];
 
     /**
-     * Convert the raw sourceMeta blob to a typed DTO automatically.
-     * Uses BaseItemDto::fromSourceMeta() which maps dcterms: keys via DcTerms enum.
-     * Returns null when ctx is empty.
+     * Convert the raw sourceMeta blob to a typed DTO when data-bundle is installed.
      */
-    public function dto(): ?BaseItemDto
+    public function dto(): ?object
     {
-        if (!$this->ctx) return null;
-        return BaseItemDto::fromSourceMeta($this->ctx);
+        if (!$this->ctx || !class_exists(\Survos\DataBundle\Dto\Item\BaseItemDto::class)) {
+            return null;
+        }
+
+        return \Survos\DataBundle\Dto\Item\BaseItemDto::fromSourceMeta($this->ctx);
     }
 
     public function contentType(): ?string
@@ -120,7 +141,7 @@ final class SourceMetadata
     public function contentTypeUri(): ?string
     {
         $ct = $this->contentType();
-        return $ct ? ContentType::uri($ct) : null;
+        return $ct ? self::CONTENT_TYPE_URIS[$ct] ?? null : null;
     }
 
     /**

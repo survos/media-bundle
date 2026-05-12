@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Dto;
 
-use Survos\DataBundle\Vocabulary\DcTerms;
-use Survos\ImportBundle\Dto\Attributes\Map;
+use Survos\FieldBundle\Attribute\Map;
 use Symfony\AI\Platform\Contract\JsonSchema\Attribute\With;
 
 /**
@@ -26,10 +25,19 @@ use Symfony\AI\Platform\Contract\JsonSchema\Attribute\With;
  *   $item = $dtoMapper->mapRecord($normalizedRow, MediaSyncItem::class);
  *   if ($item->isPermitted()) { ... }
  *
- * @see DcTerms for the vocabulary of dc_term values used below
  */
 final class MediaSyncItem
 {
+    private const DC_TITLE = 'dcterms:title';
+    private const DC_DESCRIPTION = 'dcterms:description';
+    private const DC_DATE = 'dcterms:date';
+    private const DC_TYPE = 'dcterms:type';
+    private const DC_CREATOR = 'dcterms:creator';
+    private const DC_SUBJECT = 'dcterms:subject';
+    private const DC_PUBLISHER = 'dcterms:publisher';
+    private const DC_IS_PART_OF = 'dcterms:isPartOf';
+    private const DC_SOURCE = 'dcterms:source';
+
     #[Map(source: 'tenant')]
     public ?string $tenant = null;
 
@@ -297,15 +305,15 @@ final class MediaSyncItem
             'code'                      => $this->code,
             'aggregator'                => $this->aggregator,
             // DC fields — dcterms: keyed so context blob is queryable by RDF term
-            DcTerms::TITLE->value       => $this->title,
-            DcTerms::DESCRIPTION->value => $this->description,
-            DcTerms::DATE->value        => $this->date,
-            DcTerms::TYPE->value        => $this->type,
-            DcTerms::CREATOR->value     => $this->creator,
-            DcTerms::SUBJECT->value     => $this->subject,
-            DcTerms::PUBLISHER->value   => $this->institution,
-            DcTerms::IS_PART_OF->value  => $this->collection,
-            DcTerms::SOURCE->value      => $this->sourceUrl,
+            self::DC_TITLE              => $this->title,
+            self::DC_DESCRIPTION        => $this->description,
+            self::DC_DATE               => $this->date,
+            self::DC_TYPE               => $this->type,
+            self::DC_CREATOR            => $this->creator,
+            self::DC_SUBJECT            => $this->subject,
+            self::DC_PUBLISHER          => $this->institution,
+            self::DC_IS_PART_OF         => $this->collection,
+            self::DC_SOURCE             => $this->sourceUrl,
             // IIIF
             'iiif_base'                 => $this->iiifBase,
             'iiif_manifest'             => $this->iiifManifest,

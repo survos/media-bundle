@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Survos\MediaBundle\Interface;
 
 /**
- * Marks an entity as carrying enrich_from_thumbnail results.
- * Use HasEnrichmentTrait to get the column + computed getters automatically.
+ * Legacy marker for entities carrying enrich_from_thumbnail results.
+ *
+ * @deprecated since survos/media-bundle 2.1. Prefer explicit claims/DTOs for
+ * AI results and Survos\ImgproxyBundle\Contract\AiThumbnailProviderInterface
+ * for low-resolution AI image URL integration.
  */
 interface EnrichmentInterface
 {
