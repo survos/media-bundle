@@ -15,7 +15,7 @@ interface EnrichmentInterface
 {
     public function getEnrichment(): array;
 
-    /** Source/import metadata as a dcterms:-keyed array. Consumed by SourceMetadata and MediaShow. */
+    /** Source/import claims as a dcterms:-keyed array. Consumed by SourceClaims and MediaShow. */
     public function getSourceMeta(): array;
 
     /** Typed aggregate of all AI task results. Consumed by MediaShow "Media Enrichment" tab. */

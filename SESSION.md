@@ -2,20 +2,13 @@
 
 ## Key Changes
 
-### New: `SourceMetadata` Twig Component
-- `src/Twig/Components/SourceMetadata.php`
-- `templates/components/SourceMetadata.html.twig`
+### Moved: `SourceClaims` Twig Component
+- now lives in `survos/claims-bundle`
+- uses `survos/data-contracts` for the source DTO/content-type schema
 - Schema-driven display from `ContentType` + `BaseItemDto` property names
 - No hard-coded field lists — loops through `fields()` and `extraFields()`
 - Handles `content_type` for type-specific fields (photograph, map, manuscript, etc.)
-- Registered in `SurvosMediaBundle::loadExtension()` and `prependExtension()`
-
-### New: `AiMetadata` Twig Component
-- `src/Twig/Components/AiMetadata.php`
-- `templates/components/AiMetadata.html.twig`
-- Renders AI task results grouped by `group='image'` or `group='ocr'`
-- Handles `enrich_from_thumbnail` DTO with confidence tiers, speculations, dense_summary
-- Legacy per-task results rendered as collapsible JSON cards
+- Registered by `SurvosClaimsBundle`; media-bundle only renders it when available
 
 ### Updated: `MediaBatchDispatcher`
 - New `dispatchEnrichments(array $enrichments)` method
@@ -42,7 +35,7 @@
 - `fromNormalized(array $row)` factory
 
 ## TODO
-- `SourceMetadata` component needs `data-bundle` installed in any app using it
-- `AiMetadata` component: the `enrich` variable should be a typed `EnrichFromThumbnailResult` DTO, not raw array
-- Show "human vs AI" comparison tab (both sourceMeta and aiResults side by side)
+- `SourceClaims` component needs `data-bundle` installed in any app using it
+- Apps that render source claims must require `survos/claims-bundle`
+- Show source claims and machine claims side by side where that helps curation
 - Find where `AssetWorkflow` actually calls the AI pipeline runner

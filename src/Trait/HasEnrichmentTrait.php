@@ -229,10 +229,10 @@ trait HasEnrichmentTrait
 
     /**
      * Source (human-provided) metadata mapped to dcterms: keys
-     * for use with <twig:SourceMetadata :ctx="entity.sourceMeta" />.
+     * for use with <twig:SourceClaims :ctx="entity.sourceMeta" />.
      *
      * Reads from $defaults['import'] (snake_case normalized JSONL keys)
-     * and maps to the dcterms: namespace the SourceMetadata component expects.
+     * and maps to the dcterms: namespace the SourceClaims component expects.
      *
      * @return array<string,mixed>
      */
@@ -255,7 +255,7 @@ trait HasEnrichmentTrait
             'collections'   => 'dcterms:isPartOf',
             'institution'   => 'dcterms:publisher',
             'language'      => 'dcterms:language',
-            'rights'        => 'rights',         // legacy alias handled by SourceMetadata
+            'rights'        => 'rights',         // legacy alias handled by SourceClaims
             'license'       => 'license_uri',
             'reuse_allowed' => 'reuse_allowed',
             'source_url'    => 'dcterms:source',

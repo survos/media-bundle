@@ -107,7 +107,7 @@
           <li class="nav-item">
             <a href="#{{ tabId }}-claims"
                class="nav-link {{ activeTab == 'claims' ? 'active' : '' }}"
-               data-bs-toggle="tab" data-tab-id="claims">AI Claims</a>
+               data-bs-toggle="tab" data-tab-id="claims">Claims</a>
           </li>
         </ul>
       </div>
@@ -116,12 +116,12 @@
 
           {# Text — OCR/HTR claims consolidated from the claims table. #}
           <div id="{{ tabId }}-ocr" class="tab-pane {{ activeTab == 'ocr' ? 'active show' : '' }}" role="tabpanel">
-            <twig:AiOcrPanel :subject="this.entity"/>
+            <twig:OcrClaimsPanel :subject="this.entity"/>
           </div>
 
           {# Summary — best-guess projection derived from claims only. #}
           <div id="{{ tabId }}-summary" class="tab-pane {{ activeTab == 'summary' ? 'active show' : '' }}" role="tabpanel">
-            <twig:AiClaimsSummary :subject="this.entity"/>
+            <twig:ClaimsSummary :subject="this.entity"/>
           </div>
 
           {# Tags — chip view of subject-like claims (keywords, people, places, speculations).
@@ -129,14 +129,14 @@
              the uncertainty convention in the triage prompt. Basis prints inline so the
              operator can see *why* each tag was proposed. #}
           <div id="{{ tabId }}-tags" class="tab-pane {{ activeTab == 'tags' ? 'active show' : '' }}" role="tabpanel">
-            <twig:AiClaimsList
+            <twig:ClaimsList
               :subject="this.entity"
               predicates="dcterms:subject,foaf:Person,dcterms:spatial,ai:speculation"
               layout="chips"
             />
           </div>
 
-          {# Source Metadata — MediaSync record takes priority; sourceMeta shown as extra fields #}
+          {# Source claims — MediaSync record takes priority; sourceMeta shown as extra fields #}
           <div id="{{ tabId }}-source" class="tab-pane {{ activeTab == 'source_metadata' ? 'active show' : '' }}" role="tabpanel">
             {% if mediaSync %}
               <table class="table table-sm table-borderless mb-0">
@@ -200,7 +200,7 @@
                 </tbody>
               </table>
             {% elseif sourceMeta is not empty %}
-              <twig:SourceMetadata :ctx="sourceMeta" />
+              <twig:SourceClaims :ctx="sourceMeta" />
             {% else %}
               <div class="text-muted small p-2">No source metadata.</div>
             {% endif %}
@@ -218,9 +218,9 @@
           </div>
           {% endif %}
 
-          {# AI Claims — audit/debug view. Bulky text claims live in the Text tab. #}
+          {# Claims — audit/debug view. Bulky text claims live in the Text tab. #}
           <div id="{{ tabId }}-claims" class="tab-pane {{ activeTab == 'claims' ? 'active show' : '' }}" role="tabpanel">
-            <twig:AiClaimsList
+            <twig:ClaimsList
               :subject="this.entity"
               excludePredicates="ai:ocrText,ai:htrText,ai:printedText"
             />
