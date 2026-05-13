@@ -57,14 +57,20 @@ final class MediaShow
     /** External IIIF base URL (e.g. from MediaSyncItem.iiifBase). */
     public ?string $iiifBase = null;
 
-    /** Route name for running a single AI task. */
+    /** Route name for running a single AI task (kept for compat, unused in tabs). */
     public string $taskRoute = '';
 
-    /** Route name for enqueuing a named pipeline. */
+    /** @deprecated Pipeline tab removed; kept to avoid breaking callers. */
     public string $pipelineRoute = '';
 
     /** Base route params for taskRoute / pipelineRoute. */
     public array $routeParams = [];
+
+    /** Symfony workflow name — when set, a Workflow tab is rendered. */
+    public string $workflowCode = '';
+
+    /** APP_ENTITY_* global key for the state-debug transitions link. */
+    public string $globalKey = '';
 
     /** Image alt text. */
     public string $imageAlt = '';

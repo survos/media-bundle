@@ -97,11 +97,11 @@
                class="nav-link {{ activeTab == 'source_metadata' ? 'active' : '' }}"
                data-bs-toggle="tab" data-tab-id="source_metadata">Source Metadata</a>
           </li>
-          {% if taskRoute and (is_granted('TENANT_ADMIN') or is_granted('ROLE_ADMIN')) %}
+          {% if workflowCode %}
           <li class="nav-item">
-            <a href="#{{ tabId }}-pipelines"
-               class="nav-link {{ activeTab == 'pipelines' ? 'active' : '' }}"
-               data-bs-toggle="tab" data-tab-id="pipelines">AI Pipelines</a>
+            <a href="#{{ tabId }}-workflow"
+               class="nav-link {{ activeTab == 'workflow' ? 'active' : '' }}"
+               data-bs-toggle="tab" data-tab-id="workflow">Workflow</a>
           </li>
           {% endif %}
           <li class="nav-item">
@@ -206,14 +206,15 @@
             {% endif %}
           </div>
 
-          {# AI Pipelines #}
-          {% if taskRoute and (is_granted('TENANT_ADMIN') or is_granted('ROLE_ADMIN')) %}
-          <div id="{{ tabId }}-pipelines" class="tab-pane {{ activeTab == 'pipelines' ? 'active show' : '' }}" role="tabpanel">
-            <twig:PipelineActions
-              :entity="this.entity"
-              taskRoute="{{ taskRoute }}"
-              pipelineRoute="{{ pipelineRoute }}"
-              :routeParams="routeParams"
+          {# Workflow — transition controls and pending-steps queue #}
+          {% if workflowCode %}
+          <div id="{{ tabId }}-workflow" class="tab-pane {{ activeTab == 'workflow' ? 'active show' : '' }}" role="tabpanel">
+            <twig:state:workflow-marking
+              :subject="this.entity"
+              globalKey="{{ globalKey }}"
+              workflowCode="{{ workflowCode }}"
+              redirectUrl="{{ app.request.uri }}"
+              layout="table"
             />
           </div>
           {% endif %}
