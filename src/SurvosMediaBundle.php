@@ -1,83 +1,60 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Survos\MediaBundle;
 
-use Survos\BabelBundle\EventSubscriber\BabelLocaleRequestSubscriber;
-use Survos\BabelBundle\Service\StringResolver;
-use Survos\MediaBundle\Provider\ProviderInterface;
+use Survos\Kit\AbstractSurvosBundle;
+use Survos\Kit\Traits\HasDoctrineEntities;
 use Survos\MediaBundle\Service\ImageTaggingService;
 use Survos\MediaBundle\Service\MediaRegistry;
 use Survos\MediaBundle\Service\OcrService;
-use Symfony\Component\Config\Definition\Builder\TreeBuilder;
-use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
-use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
-class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterface
+class SurvosMediaBundle extends AbstractSurvosBundle
 {
-//    public function getConfigTreeBuilder(): TreeBuilder
-//    {
-//        $treeBuilder = new TreeBuilder('survos_media');
-//
-//        $treeBuilder->getRootNode()
-//            ->children()
-//                ->scalarNode('default_locale')->defaultValue('en')->end()
-//                ->scalarNode('cache_ttl')->defaultValue(3600)->end()
-//                ->booleanNode('sais_integration')->defaultTrue()->end()
-//                ->arrayNode('providers')
-//                    ->useAttributeAsKey('name')
-//                    ->arrayPrototype()
-//                        ->children()
-//                            ->booleanNode('enabled')->defaultTrue()->end()
-//                            ->scalarNode('api_key')->end()
-//                            ->scalarNode('api_secret')->end()
-//                            ->scalarNode('access_token')->end()
-//                            ->arrayNode('options')
-//                                ->variablePrototype()->end()
-//                            ->end()
-//                        ->end()
-//                    ->end()
-//                ->end()
-//            ->end();
-//
-//        return $treeBuilder;
-//    }
+    use HasDoctrineEntities;
 
-     public function configure(DefinitionConfigurator $definition): void
-     {
-         $definition->rootNode()
-             ->children()
-                 ->scalarNode('default_locale')->defaultValue('en')->end()
-                 ->scalarNode('cache_ttl')->defaultValue(3600)->end()
-                 ->booleanNode('sais_integration')->defaultTrue()->end()
-                 ->arrayNode('media_server')
-                     ->addDefaultsIfNotSet()
-                     ->children()
-                         ->scalarNode('host')->defaultValue('https://media.wip')->end()
-                         ->scalarNode('apiKey')->defaultNull()->end()
-                         ->scalarNode('resize_path')->defaultValue('/media/{preset}/{id}')->end()
-                     ->end()
-                 ->end()
-                  ->arrayNode('presets')
-                      ->useAttributeAsKey('name')
-                      ->arrayPrototype()
-                          ->children()
-                              ->scalarNode('resize')->defaultValue('fit')->end()
-                              ->integerNode('width')->isRequired()->end()
-                              ->integerNode('height')->isRequired()->end()
-                          ->end()
-                      ->end()
-                      ->defaultValue([
-                          'small' => ['resize' => 'fill', 'width' => 192, 'height' => 192],
-                          'medium' => ['resize' => 'fit', 'width' => 400, 'height' => 400],
-                          'large' => ['resize' => 'fit', 'width' => 800, 'height' => 800],
-                          'ai' => ['resize' => 'fit', 'width' => 512, 'height' => 512],
-                          'thumb' => ['resize' => 'fit', 'width' => 300, 'height' => 300],
-                      ])
-                  ->end()
-                 ->arrayNode('providers')
+    protected function doctrineAlias(): string
+    {
+        return 'Media';
+    }
+
+    public function configure(DefinitionConfigurator $definition): void
+    {
+        $definition->rootNode()
+            ->children()
+                ->scalarNode('default_locale')->defaultValue('en')->end()
+                ->scalarNode('cache_ttl')->defaultValue(3600)->end()
+                ->booleanNode('sais_integration')->defaultTrue()->end()
+                ->arrayNode('media_server')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->scalarNode('host')->defaultValue('https://media.wip')->end()
+                        ->scalarNode('apiKey')->defaultNull()->end()
+                        ->scalarNode('resize_path')->defaultValue('/media/{preset}/{id}')->end()
+                    ->end()
+                ->end()
+                ->arrayNode('presets')
+                    ->useAttributeAsKey('name')
+                    ->arrayPrototype()
+                        ->children()
+                            ->scalarNode('resize')->defaultValue('fit')->end()
+                            ->integerNode('width')->isRequired()->end()
+                            ->integerNode('height')->isRequired()->end()
+                        ->end()
+                    ->end()
+                    ->defaultValue([
+                        'small'  => ['resize' => 'fill', 'width' => 192, 'height' => 192],
+                        'medium' => ['resize' => 'fit',  'width' => 400, 'height' => 400],
+                        'large'  => ['resize' => 'fit',  'width' => 800, 'height' => 800],
+                        'ai'     => ['resize' => 'fit',  'width' => 512, 'height' => 512],
+                        'thumb'  => ['resize' => 'fit',  'width' => 300, 'height' => 300],
+                    ])
+                ->end()
+                ->arrayNode('providers')
                     ->useAttributeAsKey('name')
                     ->arrayPrototype()
                         ->children()
@@ -94,62 +71,34 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
             ->end();
     }
 
-
-    public function getPath(): string
+    public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
     {
-        return \dirname(__DIR__);
+        parent::prependExtension($container, $builder);
+
+        if ($builder->hasExtension('ux_twig_component')) {
+            $builder->prependExtensionConfig('ux_twig_component', [
+                'defaults' => [
+                    'Survos\\MediaBundle\\Twig\\Components\\' => 'components/',
+                ],
+            ]);
+        }
     }
 
-     public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
-     {
-         // Register bundle templates path for media components.
-         if ($builder->hasExtension('twig')) {
-             $builder->prependExtensionConfig('twig', [
-                 'paths' => [\dirname(__DIR__) . '/templates' => 'SurvosMedia'],
-             ]);
-         }
+    public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
+    {
+        parent::loadExtension($config, $container, $builder);
 
-         // Register component namespace so TwigComponent can resolve bundle components
-         if ($builder->hasExtension('ux_twig_component')) {
-             $builder->prependExtensionConfig('ux_twig_component', [
-                 'defaults' => [
-                     'Survos\\MediaBundle\\Twig\\Components\\' => 'components/',
-                 ],
-             ]);
-         }
-
-         $builder->prependExtensionConfig('doctrine', [
-             'orm' => [
-                 'mappings' => [
-                     'SurvosMediaBundle' => [
-                         'is_bundle' => false,
-                         'type' => 'attribute',
-                         'dir' => \dirname(__DIR__).'/src/Entity',
-                         'prefix' => 'Survos\\MediaBundle\\Entity',
-                         'alias' => 'Media',
-                     ],
-                 ],
-             ],
-         ]);
-     }
-
-     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
-     {
-        // Import services
         $container->import('../config/services.php');
 
-         foreach ([ImageTaggingService::class, MediaRegistry::class, OcrService::class] as $class) {
+        foreach ([ImageTaggingService::class, MediaRegistry::class, OcrService::class] as $class) {
             $builder->register($class)
                 ->setAutowired(true)
                 ->setAutoconfigured(true)
                 ->setPublic(true);
         }
 
-        // Register Twig components
         if (class_exists(\Symfony\UX\TwigComponent\Attribute\AsTwigComponent::class)) {
-            foreach ([
-                \Survos\MediaBundle\Twig\Components\MediaShow::class,
-            ] as $componentClass) {
+            foreach ([\Survos\MediaBundle\Twig\Components\MediaShow::class] as $componentClass) {
                 if (class_exists($componentClass)) {
                     $builder->register($componentClass)
                         ->setAutowired(true)
@@ -159,23 +108,19 @@ class SurvosMediaBundle extends AbstractBundle # implements ConfigurationInterfa
             }
         }
 
+        $container->parameters()
+            ->set('survos_media.config', $config)
+            ->set('survos_media.cache_ttl', $config['cache_ttl'])
+            ->set('survos_media.sais_integration', $config['sais_integration'])
+            ->set('survos_media.presets', $config['presets'])
+            ->set('survos_media.media_server.host', $config['media_server']['host'])
+            ->set('survos_media.media_server.apiKey', $config['media_server']['apiKey'])
+            ->set('survos_media.media_server.resize_path', $config['media_server']['resize_path']);
 
-         // Set configuration parameters
-         $container->parameters()
-             ->set('survos_media.config', $config)
-             ->set('survos_media.cache_ttl', $config['cache_ttl'])
-             ->set('survos_media.sais_integration', $config['sais_integration'])
-             ->set('survos_media.presets', $config['presets'])
-             ->set('survos_media.media_server.host', $config['media_server']['host'])
-             ->set('survos_media.media_server.apiKey', $config['media_server']['apiKey'])
-             ->set('survos_media.media_server.resize_path', $config['media_server']['resize_path']);
-
-        // Configure providers
         foreach ($config['providers'] as $name => $providerConfig) {
             if (!$providerConfig['enabled']) {
                 continue;
             }
-
             $container->parameters()
                 ->set("survos_media.provider.{$name}.config", $providerConfig);
         }

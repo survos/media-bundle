@@ -1,9 +1,10 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Command;
 
-use App\Service\ImageTaggingService;
+use Survos\MediaBundle\Service\ImageTaggingService;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
@@ -11,7 +12,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'app:tag-images',
+    name: 'media:tag-images',
     description: 'Tag a single image URL with OpenAI Vision and return JSON (tags, safety, description, time period).'
 )]
 final class TagImagesCommand
@@ -47,7 +48,7 @@ final class TagImagesCommand
         #[Option('Output path to save JSON results')]
         ?string $jsonOut = null,
 
-        #[Option('Dry run without calling OpenAI','dry')]
+        #[Option('Dry run without calling OpenAI', 'dry')]
         bool $dryRun = false,
     ): int {
         $io->title('OpenAI Image Tagger (single URL)');
@@ -65,21 +66,7 @@ final class TagImagesCommand
             return Command::INVALID;
         }
 
-        $io->writeln(sprintf('<info>URL:</info> %s', $url));
-        $io->writeln(sprintf('<info>Detail:</info> %s', $detail));
-        if ($year)     { $io->writeln('<info>Year:</info> ' . $year); }
-        if ($location) { $io->writeln('<info>Location:</info> ' . $location); }
-        if ($knownTagsCsv) { $io->writeln('<info>Known tags:</info> ' . $knownTagsCsv); }
-        if ($hint)     { $io->writeln('<info>Hint:</info> ' . $hint); }
-        $io->writeln('<info>Lang:</info> ' . ($lang ?? 'en'));
-
-        $result = [
-            'tags'        => [],
-            'safety'      => 'unknown',
-            'description' => '',
-            'time_period' => null,
-            'confidence'  => 'low',
-        ];
+        $result = [];
 
         if ($dryRun) {
             $io->note('DRY RUN — returning a synthetic example payload.');
@@ -106,25 +93,15 @@ final class TagImagesCommand
             }
         }
 
-        // Pretty-print to console
-        $io->newLine();
-        $io->writeln('<info>Result JSON:</info>');
         $io->writeln(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
-        // Optional: write to file
         if ($jsonOut) {
-            try {
-                $dir = \dirname($jsonOut);
-                if (!is_dir($dir)) {
-                    if (!mkdir($dir, 0755, true) && !is_dir($dir)) {
-                        throw new \RuntimeException("Failed to create directory: $dir");
-                    }
-                }
-                file_put_contents($jsonOut, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-                $io->success("Wrote JSON → {$jsonOut}");
-            } catch (\Throwable $e) {
-                $io->warning('Failed to write --json-out file: ' . $e->getMessage());
+            $dir = \dirname($jsonOut);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
             }
+            file_put_contents($jsonOut, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            $io->success("Wrote JSON → {$jsonOut}");
         }
 
         return Command::SUCCESS;

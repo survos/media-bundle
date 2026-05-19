@@ -15,6 +15,7 @@ use Survos\MediaBundle\Service\MediaBatchDispatcher;
 use Survos\MediaBundle\Service\MediaKeyService;
 use Survos\MediaBundle\MessageHandler\DispatchBatchMessageHandler;
 use Survos\MediaBundle\Service\MediaManager;
+use Survos\MediaBundle\Menu\MediaMenuSubscriber;
 use Survos\MediaBundle\Twig\MediaExtension;
 
 return static function (ContainerConfigurator $container): void {
@@ -54,6 +55,9 @@ return static function (ContainerConfigurator $container): void {
         ->tag('console.command');
     $services->set(MediaBatchDispatcher::class);
     $services->set(DispatchBatchMessageHandler::class);
+
+    // Menu
+    $services->set(MediaMenuSubscriber::class);
 
     // Twig
     $services->set(MediaExtension::class)

@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Survos\MediaBundle\Entity;
 
+use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
@@ -9,6 +12,9 @@ use Doctrine\ORM\Mapping as ORM;
 use Doctrine\DBAL\Types\Types;
 use Survos\FieldBundle\Attribute\EntityMeta;
 use Survos\FieldBundle\Attribute\Field;
+use Survos\FieldBundle\Attribute\RouteIdentity;
+use Survos\FieldBundle\Entity\RouteIdentityTrait;
+use Survos\FieldBundle\Entity\RouteParametersInterface;
 use Survos\MediaBundle\Repository\MediaRepository;
 use Symfony\Component\Serializer\Attribute\Groups;
 
@@ -22,17 +28,20 @@ use Symfony\Component\Serializer\Attribute\Groups;
     'audio' => Audio::class,
 ])]
 #[ApiResource(
-    operations: [new Get(), new GetCollection()],
+    operations: [new Get(uriTemplate: '/media/{id}'), new GetCollection(uriTemplate: '/media')],
     normalizationContext: ['groups' => ['media:read'], 'skip_null_values' => true],
 )]
 #[EntityMeta(icon: 'mdi:video-image', group: 'Media')]
-abstract class BaseMedia
+#[RouteIdentity(field: 'id')]
+abstract class BaseMedia implements RouteParametersInterface
 {
+    use RouteIdentityTrait;
 
     #[ORM\Id]
     #[ORM\Column(length: 32)]
     #[Groups(['media:read'])]
-    #[Field(sortable: true)]
+    #[ApiProperty(identifier: true)]
+    #[Field(sortable: true, order: 10)]
     public string $id;
 
     #[ORM\Column(length: 255)]
