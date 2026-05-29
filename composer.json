@@ -16,9 +16,9 @@
         "twig/twig": "^3.4",
         "doctrine/dbal": "^4.3.2",
         "doctrine/doctrine-bundle": "^3.0",
-        "survos/field-bundle": "^2.1",
-        "survos/kit-bundle": "^2.0",
-        "survos/tabler-bundle": "^2.0",
+        "survos/field-bundle": "^2.5",
+        "survos/kit-bundle": "^2.5",
+        "survos/tabler-bundle": "^2.5",
         "symfony/ux-twig-component": "^3.0"
     },
     "suggest": {
