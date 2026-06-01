@@ -22,7 +22,8 @@
         "symfony/ux-twig-component": "^3.0"
     },
     "suggest": {
-        "survos/imgproxy-bundle": "Signed imgproxy URL generation for remote image resizing",
+        "survos/imgproxy-bundle": "Signed imgproxy URL generation + PRO /info (dimensions, classification, blurhash) without downloading the original",
+        "survos/state-bundle": "Drives the media probe lifecycle as an async Symfony workflow (imgproxy /info enrichment)",
         "symfony/ai-platform": "Required for #[With] JSON Schema constraints on MediaSyncItem properties"
     },
     "require-dev": {

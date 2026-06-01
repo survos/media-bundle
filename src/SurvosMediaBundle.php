@@ -82,6 +82,20 @@ class SurvosMediaBundle extends AbstractSurvosBundle
                 ],
             ]);
         }
+
+        // Icons used by the Media admin menu + entity EntityMeta attributes. Declaring
+        // them as aliases lets `ux:icons:lock` discover and cache them (they're referenced
+        // from PHP attributes, which the template scanner can't see). Apps may override.
+        if ($builder->hasExtension('ux_icons')) {
+            $builder->prependExtensionConfig('ux_icons', [
+                'aliases' => [
+                    'media' => 'mdi:video-image',
+                    'photo' => 'mdi:camera',
+                    'video' => 'mdi:video',
+                    'audio' => 'mdi:music',
+                ],
+            ]);
+        }
     }
 
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
