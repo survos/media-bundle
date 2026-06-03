@@ -27,7 +27,8 @@ final class MediaRegistry
     public function ensureMedia(
         string|UploadedFile|SplFileInfo $source,
         ?string $class = null,
-        bool $flush = false
+        bool $flush = false,
+        array $sourceMeta = []
     ): BaseMedia {
         $class ??= Photo::class;
 
@@ -45,12 +46,17 @@ final class MediaRegistry
             $id = MediaIdentity::idFromOriginalUrl($url);
             $existing = $repository->find($id);
             if ($existing instanceof BaseMedia) {
+                $this->mergeSourceMeta($existing, $sourceMeta);
+                if ($flush && $sourceMeta !== []) {
+                    $this->entityManager->flush();
+                }
                 return $existing;
             }
 
             /** @var BaseMedia $media */
             $media = new $class($id);
             $media->externalUrl = $url;
+            $this->mergeSourceMeta($media, $sourceMeta);
 
             $this->entityManager->persist($media);
 
@@ -73,6 +79,7 @@ final class MediaRegistry
             $media = new $class($id);
             $media->provider = null;
             $media->externalId = null;
+            $this->mergeSourceMeta($media, $sourceMeta);
 
             $this->entityManager->persist($media);
 
@@ -110,6 +117,22 @@ final class MediaRegistry
         }
 
         return $media;
+    }
+
+    /** @param array<string, mixed> $sourceMeta */
+    private function mergeSourceMeta(BaseMedia $media, array $sourceMeta): void
+    {
+        $sourceMeta = array_filter(
+            $sourceMeta,
+            static fn(mixed $value): bool => $value !== null && $value !== [] && $value !== ""
+        );
+
+        if ($sourceMeta === []) {
+            return;
+        }
+
+        $media->rawData = array_merge($media->rawData, $sourceMeta);
+        $media->updatedAt = new \DateTimeImmutable();
     }
 
     public function flush(): void
