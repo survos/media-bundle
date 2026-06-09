@@ -109,7 +109,8 @@ final class MediaRegistry
         $media->title = $item->title ?? $media->title;
         $media->description = $item->description ?? $media->description;
         $media->rawData = array_merge($media->rawData, $item->toSourceMetaArray(), $item->toArray());
-        $media->smallUrl ??= $this->mediaUrlGenerator->resizeRemote($url, preset: MediaUrlGenerator::PRESET_SMALL);
+        // smallUrl is no longer computed locally — mediary owns imgproxy resizing
+        // (pre-imgproxy artifact removed). Resized URLs come from mediary / on-demand.
         $media->updatedAt = new \DateTimeImmutable();
 
         if ($flush) {

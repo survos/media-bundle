@@ -1,0 +1,53 @@
+{#
+  BoundingBoxImage — thin colour-coded boxes over an image, with a zoomed-crop
+  popup on hover (caption + confidence). Border colour encodes confidence.
+  See BoundingBoxNormalizer for box shapes / coordinates.
+#}
+{% set rects = this.rects() %}
+<div class="bbox-image-wrap"
+     style="position:relative; display:inline-block; max-width:100%; line-height:0;">
+
+  <img src="{{ this.src }}"
+       alt="{{ this.alt }}"
+       class="img-fluid d-block"
+       style="max-width:100%; max-height:{{ this.maxHeight }}; height:auto; object-fit:contain;"
+       loading="lazy">
+
+  {% for r in rects %}
+    {% set caption = (r.label ?? 'object') ~ (r.confPct is not null ? ' · ' ~ r.confPct ~ '%' : '') %}
+    <div class="bbox-box"
+         title="{{ caption }}"
+         style="position:absolute; box-sizing:border-box;
+                left:{{ r.left }}%; top:{{ r.top }}%;
+                width:{{ r.width }}%; height:{{ r.height }}%;
+                border:1.5px solid {{ r.color }};">
+      {% if this.popups %}
+        {% set popW = 180 %}
+        <div class="bbox-pop"
+             style="position:absolute; bottom:100%; left:50%;
+                    transform:translateX(-50%); margin-bottom:6px;
+                    width:{{ popW }}px; z-index:20; display:none;
+                    background:#111; border:1px solid {{ r.color }}; border-radius:4px;
+                    padding:4px; line-height:1.2; pointer-events:none;
+                    box-shadow:0 4px 14px rgba(0,0,0,.5);">
+          <div style="width:100%; height:{{ (popW / r.crop.aspect)|round }}px;
+                      background-image:url('{{ this.src }}'); background-repeat:no-repeat;
+                      background-size:{{ r.crop.size }}; background-position:{{ r.crop.pos }};
+                      border-radius:2px;"></div>
+          <div style="color:#fff; font-size:11px; margin-top:3px; white-space:nowrap;
+                      overflow:hidden; text-overflow:ellipsis;">
+            {{ r.label ?? 'object' }}
+            {% if r.confPct is not null %}
+              <span style="color:{{ r.color }}; font-weight:600;">{{ r.confPct }}%</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+<style>
+  .bbox-box:hover { border-width:2.5px !important; }
+  .bbox-box:hover .bbox-pop { display:block !important; }
+</style>

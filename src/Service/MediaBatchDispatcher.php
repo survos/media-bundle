@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Service;
 
+use Survos\MediaBundle\Contract\MediaSyncKeys;
 use Survos\MediaBundle\Dto\BatchDispatchResult;
 use Survos\MediaBundle\Dto\ImportEnrichmentContext;
 use Survos\MediaBundle\Dto\MediaProbeResult;
@@ -71,6 +72,22 @@ final class MediaBatchDispatcher
      */
     public function dispatch(string $client, array $urls, array $extra = []): BatchDispatchResult
     {
+        // Lift modeled source claims out of each URL's context onto a dedicated
+        // top-level map — mediary ingests these as @import claims on the record,
+        // not as context/source-meta.
+        if (isset($extra['context']) && is_array($extra['context'])) {
+            $sourceClaims = [];
+            foreach ($extra['context'] as $contextUrl => $ctx) {
+                if (is_array($ctx) && isset($ctx[MediaSyncKeys::SOURCE_CLAIMS])) {
+                    $sourceClaims[$contextUrl] = $ctx[MediaSyncKeys::SOURCE_CLAIMS];
+                    unset($extra['context'][$contextUrl][MediaSyncKeys::SOURCE_CLAIMS]);
+                }
+            }
+            if ($sourceClaims !== []) {
+                $extra[MediaSyncKeys::SOURCE_CLAIMS] = $sourceClaims;
+            }
+        }
+
         // This is the media publication boundary. Keep payloads explicit:
         // media identity + source context now, selected claims later. Mediary
         // may run its own AI, but those results should also become claims.

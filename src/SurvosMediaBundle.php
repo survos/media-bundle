@@ -111,16 +111,8 @@ class SurvosMediaBundle extends AbstractSurvosBundle
                 ->setPublic(true);
         }
 
-        if (class_exists(\Symfony\UX\TwigComponent\Attribute\AsTwigComponent::class)) {
-            foreach ([\Survos\MediaBundle\Twig\Components\MediaShow::class] as $componentClass) {
-                if (class_exists($componentClass)) {
-                    $builder->register($componentClass)
-                        ->setAutowired(true)
-                        ->setAutoconfigured(true)
-                        ->setPublic(true);
-                }
-            }
-        }
+        // Twig/Live components in src/Twig/Components/ are auto-registered by
+        // AbstractSurvosBundle::loadExtension().
 
         $container->parameters()
             ->set('survos_media.config', $config)

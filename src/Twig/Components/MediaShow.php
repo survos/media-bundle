@@ -7,6 +7,7 @@ use Survos\MediaBundle\Dto\MediaSyncItem;
 use Survos\MediaBundle\Dto\MediaEnrichment;
 use Survos\MediaBundle\Interface\EnrichmentInterface;
 use Survos\MediaBundle\Interface\MediaSyncInterface;
+use Survos\IiifBundle\Service\IiifUrl;
 use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 
 /**
@@ -106,11 +107,11 @@ final class MediaShow
             || $this->imageUrl !== null;
     }
 
-    /** Best "open full size" URL — raw IIIF max or the proxied URL. */
+    /** Best "open full size" URL — IIIF max (real endpoints) or the source image. */
     public function fullSizeUrl(): ?string
     {
         if ($this->iiifBase !== null) {
-            return $this->iiifBase . '/full/max/0/default.jpg';
+            return IiifUrl::imageUrl($this->iiifBase);
         }
         return $this->imageUrl;
     }

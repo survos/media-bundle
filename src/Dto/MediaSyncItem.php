@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Dto;
 
+use Survos\DataContracts\Dto\Claim\ClaimDTO;
 use Survos\FieldBundle\Attribute\Map;
+use Survos\IiifBundle\Service\IiifUrl;
 use Symfony\AI\Platform\Contract\JsonSchema\Attribute\With;
 
 /**
@@ -242,12 +244,12 @@ final class MediaSyncItem
             $mapped['code'] = $this->code;
         }
 
-        // Derive the image URL from iiif_base (preferred) or original image_url.
-        // Use /full/max/0/default.jpg — "max" is the IIIF standard for the largest
-        // available size the server will serve. Never triggers upsizing errors unlike
-        // fixed pixel sizes (e.g. 1600,) which fail on servers that only downsize.
+        // Derive the fetchable image URL from iiif_base (preferred) or image_url.
+        // IiifUrl appends /full/max/0/default.jpg ONLY for real IIIF endpoints;
+        // direct image URLs (Fortepan .jpg, Smithsonian IDS deliveryService?id=…)
+        // pass through unchanged, so mediary receives a valid image rather than a 404.
         if ($this->iiifBase !== null) {
-            $this->url = $this->iiifBase . '/full/max/0/default.jpg';
+            $this->url = IiifUrl::imageUrl($this->iiifBase);
         } elseif ($this->imageUrl !== null) {
             $this->url = $this->imageUrl;
         } elseif ($this->thumbnailUrl !== null) {
@@ -320,6 +322,33 @@ final class MediaSyncItem
             'image_url'                 => $this->imageUrl,
             'thumbnail_url'             => $this->thumbnailUrl,
         ], static fn($v) => $v !== null && $v !== [] && $v !== '');
+    }
+
+    /**
+     * Source metadata as modeled claims — the human-provided baseline mediary
+     * ingests as @import claims on the record. Only the dcterms: assertions
+     * become claims (identity/IIIF/rights keys are transport, not assertions);
+     * multi-valued fields (subject, creator, collection) expand to one claim per
+     * value. These are compared against AI claims, never seeded into the AI.
+     *
+     * @return list<ClaimDTO>
+     */
+    public function toSourceClaims(): array
+    {
+        $claims = [];
+        foreach ($this->toSourceMetaArray() as $predicate => $value) {
+            if (!str_starts_with($predicate, 'dcterms:')) {
+                continue;
+            }
+            foreach (is_array($value) ? $value : [$value] as $one) {
+                if ($one === null || $one === '' || is_array($one)) {
+                    continue;
+                }
+                $claims[] = new ClaimDTO(predicate: $predicate, value: $one);
+            }
+        }
+
+        return $claims;
     }
 
     /**
@@ -397,7 +426,7 @@ final class MediaSyncItem
         }
 
         if ($this->iiifBase !== null && $this->iiifBase !== '') {
-            return $this->iiifBase . '/full/max/0/default.jpg';
+            return IiifUrl::imageUrl($this->iiifBase);
         }
 
         if ($this->thumbnailUrl !== null && $this->thumbnailUrl !== '') {
