@@ -24,6 +24,14 @@ final class MediaSyncKeys
     /** Context key: item grouping id — becomes the mediary MediaRecord the claims hang on. */
     public const string RECORD_KEY = 'media_record_key';
 
+    /**
+     * Context key: list<string> of AI task names to seed onto the mediary Asset's
+     * aiQueue (e.g. ["enrich_from_thumbnail"]). A processing DIRECTIVE, not a
+     * source claim — it tells mediary which AI to run; it is never compared
+     * against AI output the way {@see SOURCE_CLAIMS} are.
+     */
+    public const string AI_QUEUE = 'ai_queue';
+
     private function __construct()
     {
     }
