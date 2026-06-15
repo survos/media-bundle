@@ -3,36 +3,44 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Trait;
 
+use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\Mapping as ORM;
+use Survos\FieldBundle\Attribute\Field;
+use Symfony\Component\Serializer\Attribute\Groups;
+
 /**
- * Doctrine-flavoured storage columns for AI pipeline enrichment.
+ * Doctrine storage columns for AI workflow directives.
  *
- * Add to any entity that wants to store ai-pipeline-bundle task results
- * in its own database row.  Wrap in DoctrineResultStore to pass to
- * AiPipelineRunner:
+ * `aiQueue` holds task names seeded on the media — a processing DIRECTIVE
+ * (e.g. ["ocr_mistral"]), not results. Task *results* are persisted as an S3
+ * sidecar keyed by media id (see {@see \Survos\MediaBundle\Service\SidecarService}),
+ * and distilled facts flow through claims-bundle. `aiCompleted` records a light
+ * completion pointer per task (task, at, sidecar key) — the bulk blob stays on S3.
  *
- *   $store = new DoctrineResultStore($entity, $em, fn() => $thumbnailUrl);
- *   $runner->runAll($store, ['enrich_from_thumbnail']);
- *   $em->flush();
- *
- * Required ORM columns (add to your entity):
- *
- *   #[ORM\Column(type: Types::JSON)]
- *   public array $aiQueue = [];
- *
- *   #[ORM\Column(type: Types::JSON)]
- *   public array $aiCompleted = [];
- *
- *   #[ORM\Column]
- *   public bool $aiLocked = false;
- *
- *   #[ORM\Column(nullable: true)]
- *   public ?string $aiDocumentType = null;
+ * The columns are mapped on the trait itself — an entity just `use`s it. They are
+ * exposed to the admin browse grid (#[Field]) and API serialization (#[Groups]) so
+ * pending tasks and completed results show in the media-search browse page.
  */
 trait HasAiVisionTrait
 {
+    /** @var list<string> task names still to run on this media (pending directive) */
+    #[ORM\Column(type: Types::JSON, options: ['default' => '[]'])]
+    #[Groups(['media:read'])]
+    #[Field(filterable: true, facet: true)]
     public array $aiQueue = [];
+
+    /** @var list<array{task: string, at: string, sidecar: string}> completed-task pointers */
+    #[ORM\Column(type: Types::JSON, options: ['default' => '[]'])]
+    #[Groups(['media:read'])]
+    #[Field]
     public array $aiCompleted = [];
+
+    #[ORM\Column(options: ['default' => false])]
     public bool $aiLocked = false;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['media:read'])]
+    #[Field(filterable: true, facet: true)]
     public ?string $aiDocumentType = null;
 
     // ── Queue helpers ─────────────────────────────────────────────────────────

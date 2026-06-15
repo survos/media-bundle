@@ -21,7 +21,8 @@
         "survos/kit-bundle": "^2.5",
         "survos/tabler-bundle": "^2.5",
         "symfony/ux-twig-component": "^3.0",
-        "survos/iiif-bundle": "^2.7"
+        "survos/iiif-bundle": "^2.7",
+        "league/flysystem": "^3.0"
     },
     "suggest": {
         "survos/imgproxy-bundle": "Signed imgproxy URL generation + PRO /info (dimensions, classification, blurhash) without downloading the original",

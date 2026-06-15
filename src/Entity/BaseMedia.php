@@ -15,7 +15,11 @@ use Survos\FieldBundle\Attribute\Field;
 use Survos\FieldBundle\Attribute\RouteIdentity;
 use Survos\FieldBundle\Entity\RouteIdentityTrait;
 use Survos\FieldBundle\Entity\RouteParametersInterface;
+use Survos\DataContracts\Workflow\ContextSubjectInterface;
+use Survos\DataContracts\Workflow\ImageSubjectInterface;
+use Survos\DataContracts\Workflow\WorkflowSubjectInterface;
 use Survos\MediaBundle\Repository\MediaRepository;
+use Survos\MediaBundle\Trait\HasAiVisionTrait;
 use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: MediaRepository::class)]
@@ -33,9 +37,10 @@ use Symfony\Component\Serializer\Attribute\Groups;
 )]
 #[EntityMeta(icon: 'mdi:video-image', group: 'Media')]
 #[RouteIdentity(field: 'id')]
-abstract class BaseMedia implements RouteParametersInterface
+abstract class BaseMedia implements RouteParametersInterface, WorkflowSubjectInterface, ImageSubjectInterface, ContextSubjectInterface
 {
     use RouteIdentityTrait;
+    use HasAiVisionTrait;
 
     #[ORM\Id]
     #[ORM\Column(length: 32)]
@@ -141,4 +146,46 @@ abstract class BaseMedia implements RouteParametersInterface
     }
 
     abstract public function getType(): string;
+
+    // ── Workflow subject: the media row IS the AI-task subject ────────────────
+
+    /** The one canonical fetchable image/document URL — prefer the archived copy. */
+    public function getWorkflowImageUrl(): ?string
+    {
+        return $this->s3Url ?? $this->externalUrl;
+    }
+
+    /** Transient per-run hints (not persisted) merged into the task context, e.g. ['max_pages' => 2]. */
+    public array $runtimeContext = [];
+
+    /** @return array<string, mixed> */
+    public function getWorkflowContext(): array
+    {
+        return [...$this->rawData, ...$this->runtimeContext];
+    }
+
+    public function getWorkflowSubjectId(): string
+    {
+        return $this->id;
+    }
+
+    public function getWorkflowSubjectType(): string
+    {
+        return $this->getType();
+    }
+
+    public function getWorkflowScope(): ?string
+    {
+        return null;
+    }
+
+    public function isWorkflowLocked(): bool
+    {
+        return $this->aiLocked;
+    }
+
+    public function setWorkflowLocked(bool $locked): void
+    {
+        $this->aiLocked = $locked;
+    }
 }
