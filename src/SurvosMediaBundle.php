@@ -97,27 +97,6 @@ class SurvosMediaBundle extends AbstractSurvosBundle
                 ],
             ]);
         }
-
-        // Read-only connection to mediary's central claims + media (asset) DB. mediary
-        // owns and writes these (like lingua owns translation memory); apps that use
-        // media-bundle READ them directly via this connection (see claims-bundle's
-        // ClaimReader). Writes are blocked at the Postgres role level (mediary_ro).
-        //
-        // Registered ONLY when the app sets MEDIARY_RO_DATABASE_URL — so apps that don't
-        // read mediary directly get no extra connection (and avoid the multi-connection
-        // default_connection trap). Opt in by setting that env to the mediary_ro DSN.
-        $roDsn = $_ENV['MEDIARY_RO_DATABASE_URL'] ?? $_SERVER['MEDIARY_RO_DATABASE_URL'] ?? getenv('MEDIARY_RO_DATABASE_URL');
-        if ($roDsn && $builder->hasExtension('doctrine')) {
-            $builder->prependExtensionConfig('doctrine', [
-                'dbal' => [
-                    'connections' => [
-                        'mediary_ro' => [
-                            'url' => '%env(resolve:MEDIARY_RO_DATABASE_URL)%',
-                        ],
-                    ],
-                ],
-            ]);
-        }
     }
 
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
