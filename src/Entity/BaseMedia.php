@@ -59,6 +59,16 @@ abstract class BaseMedia implements RouteParametersInterface, WorkflowSubjectInt
     #[Field(filterable: true)]
     public ?string $provider = null;
 
+    /**
+     * Dataset key (provider/code, e.g. "mus/fortepan") this media belongs to. First-class column
+     * (was only in rawData) so dataset-aware apps can query/group by it and per-collection AI-task
+     * callbacks can key on it. Null in apps that don't use dataset-bundle.
+     */
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['media:read'])]
+    #[Field(filterable: true)]
+    public ?string $dataset = null;
+
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['media:read'])]
     public ?string $externalId = null;
