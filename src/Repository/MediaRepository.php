@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Survos\MediaBundle\Repository;
 
 use Doctrine\ORM\EntityRepository;
+use Survos\MediaBundle\Contract\MediaSyncKeys;
 use Survos\MediaBundle\Dto\BatchDispatchResult;
 use Survos\MediaBundle\Entity\BaseMedia;
 
@@ -75,7 +76,7 @@ final class MediaRepository extends EntityRepository
     public function iterateUrlsWithContext(?string $status = null, ?int $limit = null): iterable
     {
         $qb = $this->createQueryBuilder('m')
-            ->select('m.externalUrl', 'm.rawData');
+            ->select('m.externalUrl', 'm.rawData', 'm.aiQueue');
 
         if ($status !== null) {
             $qb->andWhere('m.status = :status')
@@ -88,7 +89,15 @@ final class MediaRepository extends EntityRepository
 
         foreach ($qb->getQuery()->toIterable() as $row) {
             if ($row['externalUrl']) {
-                yield $row['externalUrl'] => ($row['rawData'] ?? []);
+                $ctx = $row['rawData'] ?? [];
+                // The seeded AI directive (aiQueue) is a separate column, NOT part of rawData — fold it
+                // into the dispatch context so mediary's AssetRegistry::ensureAsset sets asset.aiQueue
+                // (the observe/ocr task). Without this the asset lands with an empty aiQueue and the AI
+                // pipeline never fires.
+                if (!empty($row['aiQueue'])) {
+                    $ctx[MediaSyncKeys::AI_QUEUE] = array_values((array) $row['aiQueue']);
+                }
+                yield $row['externalUrl'] => $ctx;
             }
         }
     }
