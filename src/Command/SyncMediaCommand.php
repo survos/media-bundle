@@ -15,6 +15,7 @@ use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use function basename;
 use function getcwd;
@@ -26,6 +27,7 @@ final class SyncMediaCommand
         private readonly EntityManagerInterface $entityManager,
         private readonly MediaBatchDispatcher   $dispatcher,
         private readonly MediaRegistry          $mediaRegistry,
+        private readonly HttpClientInterface    $httpClient,
         private readonly ?MessageBusInterface   $bus = null,
     ) {
     }
@@ -53,6 +55,9 @@ final class SyncMediaCommand
 
         #[Option('Dispatch each batch as an async Messenger message. Prevents timeouts on large datasets. Requires a worker.')]
         bool $async = false,
+
+        #[Option('HEAD-check every source URL before dispatch and dump+stop on the first non-200 (debug aid, tracing a bad-image report back to its record). Off by default — each check is a live round trip (~1-2s), so a full run would take hours.')]
+        bool $checkUrls = false,
     ): int {
         /** @var MediaRepository $repo */
         $repo   = $this->entityManager->getRepository(BaseMedia::class);
@@ -102,12 +107,12 @@ final class SyncMediaCommand
         foreach ($repo->iterateUrlsWithContext($statusFilter, $limit) as $batchUrl => $rawData) {
             $batch[$batchUrl] = $rawData;
             if (count($batch) >= $batchSize) {
-                $total = $this->flushBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $async, $progress);
+                $total = $this->flushBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $async, $progress, $checkUrls);
                 $batch = [];
             }
         }
         if ($batch !== []) {
-            $total = $this->flushBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $async, $progress);
+            $total = $this->flushBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $async, $progress, $checkUrls);
         }
 
         $progress->finish();
@@ -130,6 +135,7 @@ final class SyncMediaCommand
         bool $uploadOnly,
         bool $async,
         mixed $progress,
+        bool $checkUrls = false,
     ): int {
         $urls       = array_keys($batch);
         $contextMap = array_filter($batch, static fn($ctx) => $ctx !== []);
@@ -137,6 +143,29 @@ final class SyncMediaCommand
         if ($io->isVeryVerbose()) {
             foreach ($urls as $u) {
                 $io->writeln(sprintf('  → %s', $u));
+            }
+        }
+
+        // --check-urls debug aid: mediary reports non-200 source images with no clue which record
+        // they came from. Check locally, right before dispatch, where we still have the record's
+        // own metadata (rawData) — dump it and stop cold instead of feeding mediary a URL it can't
+        // fetch and getting an opaque failure three hops away. Opt-in and off by default: each
+        // check is a live round trip (~1-2s against a Lambda-backed image handler), so checking
+        // every URL on every run would take hours at real dataset sizes.
+        if ($checkUrls) {
+            foreach ($batch as $checkUrl => $rawData) {
+                try {
+                    $head   = $this->httpClient->request('HEAD', $checkUrl, ['timeout' => 10]);
+                    $status = $head->getStatusCode();
+                } catch (\Throwable $e) {
+                    $status = $e->getMessage();
+                }
+                if ($status !== 200) {
+                    $io->error(sprintf('Source image did not return 200 (got %s): %s', $status, $checkUrl));
+                    dump($rawData);
+                    dump(['client' => $client, 'context' => $contextMap[$checkUrl] ?? null]);
+                    exit(1);
+                }
             }
         }
 

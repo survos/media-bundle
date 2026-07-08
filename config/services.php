@@ -2,12 +2,6 @@
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
-use Survos\MediaBundle\Command\FetchYouTubeCommand;
-use Survos\MediaBundle\Command\FetchFlickrCommand;
-use Survos\MediaBundle\Command\FetchMediaCommand;
-use Survos\MediaBundle\Command\SyncMediaCommand;
-use Survos\MediaBundle\Command\MediaStatsCommand;
-use Survos\MediaBundle\Command\ProbeMediaCommand;
 use Survos\MediaBundle\EventListener\MediaPostLoadListener;
 use Survos\MediaBundle\Provider\YouTubeProvider;
 use Survos\MediaBundle\Provider\FlickrProvider;
@@ -44,15 +38,8 @@ return static function (ContainerConfigurator $container): void {
     $services->set(FlickrProvider::class)
         ->arg('$config', param('survos_media.provider.flickr.config'));
 
-    // Commands
+    // Commands — auto-registered from src/Command by AbstractSurvosBundle::loadExtension()
     $services->set(MediaKeyService::class);
-    $services->set(FetchYouTubeCommand::class);
-    $services->set(FetchFlickrCommand::class);
-    $services->set(FetchMediaCommand::class);
-    $services->set(SyncMediaCommand::class);
-    $services->set(ProbeMediaCommand::class);
-    $services->set(MediaStatsCommand::class)
-        ->tag('console.command');
     $services->set(MediaBatchDispatcher::class);
     $services->set(DispatchBatchMessageHandler::class);
 

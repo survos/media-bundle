@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Survos\MediaBundle\Dto;
 
 use Survos\DataContracts\Dto\Claim\ClaimDTO;
+use Survos\DataContracts\Vocabulary\ItemField;
 use Survos\FieldBundle\Attribute\Map;
 use Survos\IiifBundle\Service\IiifUrl;
 use Symfony\AI\Platform\Contract\JsonSchema\Attribute\With;
@@ -222,10 +223,15 @@ final class MediaSyncItem
 
     /**
      * dc_term: dcterms:source
-     * Object landing page at the holding institution.
+     * Object landing page at the holding institution — the citation URL to trace a
+     * problem image (invalid, wrong size, non-200) back to its source record. DC-family
+     * rows key this ItemField::URL; folio-normalized rows (fpeu, fpus, and friends) key
+     * it ItemField::CITATION_URL instead — DtoMapper matches source keys exactly (no
+     * snake/camel normalization), so both must be listed or one provider family
+     * silently loses this field.
      * @var string|null
      */
-    #[Map(source: 'url')]
+    #[Map(source: [ItemField::URL, ItemField::CITATION_URL])]
     public ?string $sourceUrl = null;
 
     // ── afterMap hook ─────────────────────────────────────────────────────

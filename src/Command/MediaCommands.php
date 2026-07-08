@@ -10,30 +10,37 @@ use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand('media:stats', 'Report local media status counts')]
-final class MediaStatsCommand
+final class MediaCommands
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
-    public function __invoke(
+    /**
+     * Was a hidden --clear/--force flag bolted onto media:stats — its own command instead of a
+     * side effect of a reporting command.
+     */
+    #[AsCommand('media:reset', 'Purge the entire media table (requires --force)')]
+    public function reset(
         SymfonyStyle $io,
-        #[Option('Truncate the entire media table (requires --force)')] bool $clear = false,
-        #[Option('Required to confirm destructive --clear operation')]   bool $force = false,
+        #[Option('Required to confirm this destructive operation')] bool $force = false,
     ): int {
-        if ($clear) {
-            if (!$force) {
-                $io->error('--clear requires --force to confirm truncation of the media table.');
-                return Command::FAILURE;
-            }
-            $conn = $this->entityManager->getConnection();
-            $conn->executeStatement('DELETE FROM media');
-            $io->success('Media table cleared.');
-            return Command::SUCCESS;
+        if (!$force) {
+            $io->error('media:reset requires --force to confirm truncation of the media table.');
+            return Command::FAILURE;
         }
 
+        $this->entityManager->getConnection()->executeStatement('DELETE FROM media');
+        $io->success('Media table cleared.');
+
+        return Command::SUCCESS;
+    }
+
+    #[AsCommand('media:stats', 'Report local media status counts')]
+    public function stats(
+        SymfonyStyle $io,
+    ): int {
         $repo = $this->entityManager->getRepository(BaseMedia::class);
 
         $total = (int) $repo->createQueryBuilder('m')
