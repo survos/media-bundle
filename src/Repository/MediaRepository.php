@@ -54,7 +54,7 @@ final class MediaRepository extends EntityRepository
     /**
      * Count URLs for progress bar display before iterating.
      */
-    public function countUrlsWithContext(?string $status = null, ?int $limit = null): int
+    public function countUrlsWithContext(?string $status = null, ?int $limit = null, ?string $dataset = null): int
     {
         $qb = $this->createQueryBuilder('m')
             ->select('COUNT(m.externalUrl)');
@@ -62,6 +62,11 @@ final class MediaRepository extends EntityRepository
         if ($status !== null) {
             $qb->andWhere('m.status = :status')
                ->setParameter('status', $status);
+        }
+
+        if ($dataset !== null) {
+            $qb->andWhere('m.dataset = :dataset')
+               ->setParameter('dataset', $dataset);
         }
 
         $count = (int) $qb->getQuery()->getSingleScalarResult();
@@ -73,7 +78,7 @@ final class MediaRepository extends EntityRepository
      * Iterate [url => rawData] pairs for building context maps on dispatch.
      * @return iterable<string, array>
      */
-    public function iterateUrlsWithContext(?string $status = null, ?int $limit = null): iterable
+    public function iterateUrlsWithContext(?string $status = null, ?int $limit = null, ?string $dataset = null): iterable
     {
         $qb = $this->createQueryBuilder('m')
             ->select('m.externalUrl', 'm.rawData', 'm.aiQueue');
@@ -81,6 +86,11 @@ final class MediaRepository extends EntityRepository
         if ($status !== null) {
             $qb->andWhere('m.status = :status')
                ->setParameter('status', $status);
+        }
+
+        if ($dataset !== null) {
+            $qb->andWhere('m.dataset = :dataset')
+               ->setParameter('dataset', $dataset);
         }
 
         if ($limit !== null) {

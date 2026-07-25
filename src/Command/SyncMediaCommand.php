@@ -58,6 +58,9 @@ final class SyncMediaCommand
 
         #[Option('HEAD-check every source URL before dispatch and dump+stop on the first non-200 (debug aid, tracing a bad-image report back to its record). Off by default — each check is a live round trip (~1-2s), so a full run would take hours.')]
         bool $checkUrls = false,
+
+        #[Option('Restrict to media from this dataset key (e.g. mus/saveoursigns). Omit to sync every dataset\'s status=new media.')]
+        ?string $dataset = null,
     ): int {
         /** @var MediaRepository $repo */
         $repo   = $this->entityManager->getRepository(BaseMedia::class);
@@ -83,7 +86,7 @@ final class SyncMediaCommand
         }
 
         $statusFilter = $all ? null : 'new';
-        $totalCount   = $repo->countUrlsWithContext($statusFilter, $limit);
+        $totalCount   = $repo->countUrlsWithContext($statusFilter, $limit, $dataset);
 
         $io->note(sprintf('Media to sync: %d (upload-only: %s, async: %s)',
             $totalCount,
@@ -104,7 +107,7 @@ final class SyncMediaCommand
         $batch = [];
         $total = 0;
 
-        foreach ($repo->iterateUrlsWithContext($statusFilter, $limit) as $batchUrl => $rawData) {
+        foreach ($repo->iterateUrlsWithContext($statusFilter, $limit, $dataset) as $batchUrl => $rawData) {
             $batch[$batchUrl] = $rawData;
             if (count($batch) >= $batchSize) {
                 $total = $this->flushBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $async, $progress, $checkUrls);
