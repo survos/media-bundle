@@ -43,8 +43,10 @@ return static function (ContainerConfigurator $container): void {
     $services->set(MediaBatchDispatcher::class);
     $services->set(DispatchBatchMessageHandler::class);
 
-    // Menu
-    $services->set(MediaMenuSubscriber::class);
+    // Menu (only when tabler-bundle is installed; it's a suggest, not a hard require)
+    if (class_exists(\Survos\TablerBundle\Event\MenuEvent::class)) {
+        $services->set(MediaMenuSubscriber::class);
+    }
 
     // Twig
     $services->set(MediaExtension::class)
