@@ -74,6 +74,18 @@ trait HasAiVisionTrait
         return null;
     }
 
+    /** @return array<string, array|null> completed AI results keyed by task name */
+    public function getAiResults(): array
+    {
+        $results = [];
+        foreach ($this->aiCompleted as $entry) {
+            if (isset($entry['task'])) {
+                $results[$entry['task']] = $entry['result'] ?? null;
+            }
+        }
+        return $results;
+    }
+
     public function getOcrText(): ?string
     {
         return $this->getAiResult('ocr')['text']
