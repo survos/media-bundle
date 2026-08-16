@@ -123,7 +123,7 @@ final class MediaBatchDispatcher
     }
 
     /**
-     * Probe one registered media item by SAIS/Mediary asset id.
+     * Probe one registered media item by mediary asset id.
      */
     public function probe(string $assetId): MediaProbeResult
     {
