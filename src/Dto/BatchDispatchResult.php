@@ -21,6 +21,18 @@ final class BatchDispatchResult
      */
     public array $rows = [];
 
+    /**
+     * URLs mediary refused because they are not fetchable over HTTP.
+     *
+     * Almost always source data holding an identifier where an image URL was
+     * expected — Smithsonian EDAN ids being the case that surfaced this. Worth
+     * showing rather than swallowing: a short media[] with no explanation reads
+     * as "some rows already existed".
+     *
+     * @var list<string>
+     */
+    public array $rejected = [];
+
     public static function fromArray(array $data): self
     {
         $self = new self();
@@ -31,6 +43,11 @@ final class BatchDispatchResult
             $self->rows[]   = $row;
             $self->media[]  = MediaRegistration::fromArray($row);
         }
+        $self->rejected = array_values(array_filter(
+            (array) ($data['rejected'] ?? []),
+            static fn ($u): bool => is_string($u),
+        ));
+
         return $self;
     }
 }

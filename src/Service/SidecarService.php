@@ -50,7 +50,7 @@ final class SidecarService
 
     public function exists(string $id, string $task): bool
     {
-        return $this->fs()->fileExists($this->path($id, $task));
+        return $this->probe($this->path($id, $task), $id, $task);
     }
 
     /**
@@ -61,12 +61,56 @@ final class SidecarService
     public function read(string $id, string $task): ?array
     {
         $path = $this->path($id, $task);
-        $fs = $this->fs();
-        if (!$fs->fileExists($path)) {
+        if (!$this->probe($path, $id, $task)) {
             return null;
         }
 
-        return json_decode($fs->read($path), true, 512, JSON_THROW_ON_ERROR);
+        try {
+            $raw = $this->fs()->read($path);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException($this->explain('read', $path, $id, $task, $e), 0, $e);
+        }
+
+        return json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * fileExists() with an error message that says something.
+     *
+     * Flysystem reports every non-404 outcome as the bare
+     * "Unable to check existence for: o/e/54/{id}.observe.json" — which is a
+     * credential problem, a bucket problem, a prefix problem, a network blip and
+     * a rate-limit all rendered identically, with the actual S3 response only in
+     * a previous exception nobody logs. Diagnosing one such burst on 2026-08-17
+     * meant hand-checking the bucket, the creds, the prefix config and a raw
+     * HeadObject before concluding it was transient. The message should have said
+     * that.
+     */
+    private function probe(string $path, string $id, string $task): bool
+    {
+        try {
+            return $this->fs()->fileExists($path);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException($this->explain('existence check', $path, $id, $task, $e), 0, $e);
+        }
+    }
+
+    /** Unwrap the whole cause chain — Flysystem keeps the real S3 error in ->getPrevious(). */
+    private function explain(string $op, string $path, string $id, string $task, \Throwable $e): string
+    {
+        $causes = [];
+        for ($x = $e; $x !== null; $x = $x->getPrevious()) {
+            $causes[] = sprintf('%s: %s', (new \ReflectionClass($x))->getShortName(), $x->getMessage());
+        }
+
+        return sprintf(
+            'AI sidecar %s failed for asset %s task "%s" at storage key "%s" — %s',
+            $op,
+            $id,
+            $task,
+            $path,
+            implode(' <- ', $causes),
+        );
     }
 
     /**

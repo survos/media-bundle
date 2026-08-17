@@ -61,6 +61,15 @@ final class MediaSyncItem
      */
     public ?string $url = null;
 
+    /**
+     * Why $url is null when the row looked like it had one — for the caller to
+     * SAY something rather than silently counting the item as image-less.
+     *
+     * Never mapped and never sent to mediary; purely a diagnostic for the
+     * ensure/sync step that has to explain itself to an operator.
+     */
+    public ?string $urlProblem = null;
+
     // ── Rights — never AI-extracted, must come from authoritative source ──
 
     /**
@@ -254,14 +263,44 @@ final class MediaSyncItem
         // IiifUrl appends /full/max/0/default.jpg ONLY for real IIIF endpoints;
         // direct image URLs (Fortepan .jpg, Smithsonian IDS deliveryService?id=…)
         // pass through unchanged, so mediary receives a valid image rather than a 404.
-        if ($this->iiifBase !== null) {
-            $this->url = IiifUrl::imageUrl($this->iiifBase);
-        } elseif ($this->imageUrl !== null) {
-            $this->url = $this->imageUrl;
-        } elseif ($this->thumbnailUrl !== null) {
-            $this->url = $this->thumbnailUrl;
+        $derived = match (true) {
+            $this->iiifBase     !== null => IiifUrl::imageUrl($this->iiifBase),
+            $this->imageUrl     !== null => $this->imageUrl,
+            $this->thumbnailUrl !== null => $this->thumbnailUrl,
+            default                      => null,
+        };
+
+        // afterMap OWNS this property. The docblock has always said "not mapped
+        // directly — set by afterMap()", but nothing enforced it: DtoMapper matches
+        // by name, so a normalized row carrying its own `url` key silently
+        // pre-populated $this->url, and the derivation above only overwrote it when
+        // one of the three real image sources existed. Where none did, the row's
+        // `url` survived as the "image URL" — and a row's `url` is its RECORD
+        // address, not its image.
+        //
+        // Measured 2026-08-17 over 7 datasets, both failure modes present:
+        //   smith/aaa       25/25  url = "ead_component:sova-aaa-amerfeda-ref669"
+        //   smith/chndm      1/25  url = "edanmdm:chndm_1921-6-390-127"
+        //   mus/cleveland    1/25  url = "https://clevelandart.org/art/2015.441"
+        // The first two blow up in mediary's archive step ("Unsupported scheme")
+        // and retry until they give up — noisy, but at least visible. The third is
+        // the dangerous one: a perfectly valid https URL that passes every scheme
+        // check and would be archived as the master image, except it is an HTML
+        // landing page. Nothing downstream would ever have told us.
+        if ($derived !== null) {
+            $this->url = $derived;
+        } elseif ($this->url !== null) {
+            $this->urlProblem = sprintf(
+                'no image source (iiif_base/image_url/thumbnail_url); row["url"]=%s is a record address, not an image',
+                var_export($this->url, true),
+            );
+            $this->url = null;
         }
         $mapped['url'] = $this->url;
+        // MUST go through $mapped: DtoMapper snapshots the DTO before calling
+        // afterMap() and re-applies that snapshot afterwards, so a property set
+        // only on $this is silently reverted.
+        $mapped['urlProblem'] = $this->urlProblem;
 
         // date arrives as array from DC — take the first element
         if (is_array($this->date)) {

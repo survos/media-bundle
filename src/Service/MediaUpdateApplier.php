@@ -16,11 +16,12 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  *
  * Two callers, one implementation, deliberately:
  *
- *   media:sync            calls this DIRECTLY with mediary's batch response —
- *                         synchronous, no queue, so a failure surfaces in the
- *                         command output instead of a worker log.
- *   MediaUpdatedMessage   the async callback path, which does nothing but hand
- *                         the same blob to the same method.
+ *   media:sync                 calls this DIRECTLY with mediary's batch response —
+ *                              synchronous, no queue, so a failure surfaces in the
+ *                              command output instead of a worker log.
+ *   MediaRemoteEventConsumer   the async callback path (mediary's signed webhook at
+ *                              /webhook/mediary), which does nothing but hand the same
+ *                              blob to the same method.
  *
  * Because both consume the identical blob shape (MediaUpdate), the debuggable
  * path and the production path cannot diverge. The previous arrangement — an

@@ -22,7 +22,10 @@
         "symfony/config": "^8.1",
         "symfony/dependency-injection": "^8.1",
         "symfony/http-kernel": "^8.1",
+        "symfony/messenger": "^8.1",
+        "symfony/remote-event": "^8.1",
         "symfony/ux-twig-component": "^3.0",
+        "symfony/webhook": "^8.1",
         "twig/twig": "^3.4|^4.0"
     },
     "suggest": {

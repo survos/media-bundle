@@ -71,6 +71,48 @@ Local files are assigned a temporary `local://` URL until synced.
 
 ---
 
+## Receiving mediary's callback
+
+mediary POSTs a signed `asset.analyzed` webhook to `/webhook/mediary` when an image finishes
+analysis. This bundle supplies the two pieces that belong to it — a request parser
+(`Survos\MediaBundle\Webhook\MediaWebhookRequestParser`) and a consumer that calls
+`MediaUpdateApplier`, the same write path `media:sync` uses. It contributes no route and no
+controller; the endpoint is FrameworkBundle's own.
+
+In the app:
+
+```yaml
+# config/routes/webhook.yaml
+webhook:
+    resource: '@FrameworkBundle/Resources/config/routing/webhook.php'
+    prefix: /webhook
+
+# config/packages/webhook.yaml
+framework:
+    webhook:
+        routing:
+            mediary:
+                service: Survos\MediaBundle\Webhook\MediaWebhookRequestParser
+                secret: '%env(default::MEDIARY_WEBHOOK_SECRET)%'
+
+# config/packages/messenger.yaml — REQUIRED, or the endpoint's 202 is a lie
+framework:
+    messenger:
+        routing:
+            'Symfony\Component\RemoteEvent\Messenger\ConsumeRemoteEventMessage': media_callback
+```
+
+Set `MEDIARY_WEBHOOK_SECRET` to the same value mediary signs with, and point
+`MEDIA_CALLBACK_URL` at `https://your-app/webhook/mediary`.
+
+To react to updates, listen for `MediaUpdatedEvent` — mediary never learns your entity shape.
+
+Full contract, including how to run several webhooks on separate queues:
+[kit-bundle/docs/webhooks.md](../kit-bundle/docs/webhooks.md).
+
+> Replaced the unauthenticated `MediaCallbackController` at `/media/callback`, where anyone who
+> could reach the URL could rewrite a media row. See survos-sites/mediary#8.
+
 ## Probing Mediary (Polling Fallback)
 
 When webhook callbacks are unavailable (for example, local dev tunnels are down), poll mediary directly via the bundle service.

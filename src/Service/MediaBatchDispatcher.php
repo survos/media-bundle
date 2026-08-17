@@ -27,10 +27,17 @@ final class MediaBatchDispatcher
          * so without this every media row kept its origin external_url forever
          * and imgproxy re-fetched from the origin on every cache miss.
          *
-         * Set MEDIA_CALLBACK_URL to the app's survos_media_callback route, e.g.
-         * https://md.wip/media/callback (mediary proxies .wip through the
+         * Set MEDIA_CALLBACK_URL to the app's webhook endpoint, e.g.
+         * https://md.wip/webhook/mediary (mediary proxies .wip through the
          * symfony proxy automatically). Null disables the callback, restoring
          * the old dispatch-response-only behaviour.
+         *
+         * The path changed from /media/callback when the receiver moved to
+         * symfony/webhook — the old endpoint had no authentication at all. Any
+         * asset registered before that move still carries the OLD url in
+         * mediary's context['callback_url']; re-registering overwrites it
+         * (last-writer-wins), and mediary ships `webhook:migrate-callback-urls`
+         * for the backlog. See survos-sites/mediary#8.
          */
         #[Autowire('%env(default::MEDIA_CALLBACK_URL)%')]
         private readonly ?string $callbackUrl = null,

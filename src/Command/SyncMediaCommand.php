@@ -32,7 +32,7 @@ final class SyncMediaCommand
         /**
          * The same write path the async callback uses. Running it here — in a
          * command, synchronously — is the whole point: whatever media:sync does
-         * to a row is exactly what MediaUpdatedMessageHandler will do to it off
+         * to a row is exactly what MediaRemoteEventConsumer will do to it off
          * the queue, so a bug is reproducible in the foreground.
          */
         private readonly MediaUpdateApplier     $applier,

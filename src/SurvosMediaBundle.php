@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Survos\MediaBundle;
 
 use Survos\Kit\AbstractSurvosBundle;
-use Survos\Kit\Traits\HasConfigurableRoutes;
 use Survos\Kit\Traits\HasDoctrineEntities;
 use Survos\MediaBundle\Service\ImageTaggingService;
 use Survos\MediaBundle\Service\MediaRegistry;
@@ -18,7 +17,6 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 class SurvosMediaBundle extends AbstractSurvosBundle
 {
     use HasDoctrineEntities;
-    use HasConfigurableRoutes;
 
     protected function doctrineAlias(): string
     {
@@ -27,14 +25,11 @@ class SurvosMediaBundle extends AbstractSurvosBundle
 
     public function configure(DefinitionConfigurator $definition): void
     {
-        // MediaCallbackController was added as the receiving end of mediary's
-        // asset.analyzed webhook, but a controller registered as a service is
-        // not a route — without this the endpoint 404s in every app, which is
-        // the same "the wire is not connected" failure as the missing
-        // callback_url. Default prefix is empty so the path stays the
-        // literal /media/callback that MEDIA_CALLBACK_URL points at.
-        $this->addRouteOptions($definition->rootNode()->children(), '');
-
+        // NOTE: HasConfigurableRoutes was mixed in solely to expose MediaCallbackController's
+        // /media/callback route, and went away with it. mediary's callback now arrives at
+        // /webhook/mediary, which is FrameworkBundle's own WebhookController — the app imports
+        // that route itself (see docs/webhooks.md) and this bundle contributes only a request
+        // parser and a consumer. src/Controller/ no longer exists.
         $definition->rootNode()
             ->children()
                 ->scalarNode('default_locale')->defaultValue('en')->end()
