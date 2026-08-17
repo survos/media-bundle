@@ -16,6 +16,24 @@ final class MediaBatchDispatcher
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         #[Autowire('%env(MEDIARY_ENDPOINT)%')] private readonly string $mediaServerBaseUrl,
+        /**
+         * Absolute URL mediary POSTs to when an asset finishes analysis.
+         *
+         * THIS IS THE LINK THAT WAS MISSING. mediary has always fired a webhook
+         * to context['callback_url'] on completion (AssetWorkflow::onCompleted)
+         * and even ships ReplayWebhooksCommand for redelivering failed ones —
+         * but no client ever sent a URL, so the notification had nowhere to go.
+         * The synchronous dispatch response necessarily predates the S3 upload,
+         * so without this every media row kept its origin external_url forever
+         * and imgproxy re-fetched from the origin on every cache miss.
+         *
+         * Set MEDIA_CALLBACK_URL to the app's survos_media_callback route, e.g.
+         * https://md.wip/media/callback (mediary proxies .wip through the
+         * symfony proxy automatically). Null disables the callback, restoring
+         * the old dispatch-response-only behaviour.
+         */
+        #[Autowire('%env(default::MEDIA_CALLBACK_URL)%')]
+        private readonly ?string $callbackUrl = null,
     ) {
     }
 
@@ -86,6 +104,13 @@ final class MediaBatchDispatcher
             if ($sourceClaims !== []) {
                 $extra[MediaSyncKeys::SOURCE_CLAIMS] = $sourceClaims;
             }
+        }
+
+        // Tell mediary where to publish completion. Caller-supplied wins, so a
+        // one-off sync can redirect callbacks (e.g. at a tunnel) without
+        // changing config.
+        if ($this->callbackUrl !== null && $this->callbackUrl !== '' && !isset($extra['callback_url'])) {
+            $extra['callback_url'] = $this->callbackUrl;
         }
 
         // This is the media publication boundary. Keep payloads explicit:

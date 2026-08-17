@@ -10,22 +10,22 @@
     "type": "symfony-bundle",
     "require": {
         "php": "^8.5",
+        "doctrine/dbal": "^4.3.2",
+        "doctrine/doctrine-bundle": "^3.0",
+        "league/flysystem": "^3.0",
+        "survos/data-contracts": "^2.5",
+        "survos/field-bundle": "^2.5",
+        "survos/iiif-bundle": "^2.7",
+        "survos/imgproxy-bundle": "^2.7",
+        "survos/kit-bundle": "^2.5",
+        "survos/tabler-bundle": "^2.5",
         "symfony/config": "^8.1",
         "symfony/dependency-injection": "^8.1",
         "symfony/http-kernel": "^8.1",
-        "twig/twig": "^3.4|^4.0",
-        "doctrine/dbal": "^4.3.2",
-        "doctrine/doctrine-bundle": "^3.0",
-        "survos/data-contracts": "^2.5",
-        "survos/field-bundle": "^2.5",
-        "survos/kit-bundle": "^2.5",
-        "survos/tabler-bundle": "^2.5",
         "symfony/ux-twig-component": "^3.0",
-        "survos/iiif-bundle": "^2.7",
-        "league/flysystem": "^3.0"
+        "twig/twig": "^3.4|^4.0"
     },
     "suggest": {
-        "survos/imgproxy-bundle": "Signed imgproxy URL generation + PRO /info (dimensions, classification, blurhash) without downloading the original",
         "survos/state-bundle": "Drives the media probe lifecycle as an async Symfony workflow (imgproxy /info enrichment)",
         "symfony/ai-platform": "Required for #[With] JSON Schema constraints on MediaSyncItem properties"
     },

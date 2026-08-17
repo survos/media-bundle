@@ -112,6 +112,46 @@ abstract class BaseMedia implements RouteParametersInterface, WorkflowSubjectInt
     #[Groups(['media:read'])]
     public array $tags = [];
 
+    /**
+     * imgproxy Pro's /info response, stored verbatim.
+     *
+     * Kept whole rather than shredded into columns because the enabled info
+     * options vary by imgproxy version and build — promoting each field would
+     * mean a migration every time imgproxy learns something new. The fields we
+     * actually query (width/height/mime) ARE promoted to real columns above; the
+     * rest is read through the hooks below.
+     *
+     * Yes, this weighs the row down. Acceptable here: media rows are written by
+     * the sync/callback path and read mostly through folios and search indexes,
+     * not by hydrating the entity.
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    public ?array $info = null;
+
+    /**
+     * Face boxes detected by imgproxy Pro, normalised 0..1 with confidence.
+     *
+     * A property hook, not a column: this is specifically imgproxy's object
+     * detection shape (yolox `class_name: "face"`), not a general-purpose face
+     * record. Detections from another engine — OpenCV, say — would have a
+     * different shape and do not belong in the same field. Treat it as bonus
+     * data that happens to ride along with /info.
+     *
+     * @return list<array{top:float,left:float,width:float,height:float,confidence:float,class_name:string}>
+     */
+    #[Groups(['media:read'])]
+    public array $faces {
+        get => array_values(array_filter(
+            $this->info['objects'] ?? [],
+            static fn (mixed $o): bool => is_array($o) && ($o['class_name'] ?? null) === 'face',
+        ));
+    }
+
+    /** Average RGB of the image, from /info. Useful as a placeholder colour. */
+    public ?array $averageColor {
+        get => is_array($this->info['average'] ?? null) ? $this->info['average'] : null;
+    }
+
     #[ORM\Column(type: Types::INTEGER, nullable: true)]
     #[Groups(['media:read'])]
     #[Field(sortable: true)]
