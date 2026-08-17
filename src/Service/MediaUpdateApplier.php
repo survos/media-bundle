@@ -6,6 +6,7 @@ namespace Survos\MediaBundle\Service;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Survos\MediaBundle\Dto\MediaUpdate;
+use Survos\MediaBundle\Entity\BaseMedia;
 use Survos\MediaBundle\Event\MediaUpdatedEvent;
 use Survos\MediaBundle\Repository\MediaRepository;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
@@ -49,11 +50,22 @@ final class MediaUpdateApplier
     ];
 
     public function __construct(
-        private readonly MediaRepository          $mediaRepository,
         private readonly EntityManagerInterface   $em,
         private readonly EventDispatcherInterface $dispatcher,
         private readonly LoggerInterface          $logger,
     ) {
+    }
+
+    /**
+     * MediaRepository extends EntityRepository, not ServiceEntityRepository, so
+     * it is not autowirable — it only exists via the entity manager. Resolved
+     * per call rather than in the constructor because a repository handle does
+     * not survive em->clear(), and the batch path clears.
+     */
+    private function repository(): MediaRepository
+    {
+        /** @var MediaRepository */
+        return $this->em->getRepository(BaseMedia::class);
     }
 
     /**
@@ -67,7 +79,7 @@ final class MediaUpdateApplier
         }
 
         $key = $update->mediaKey();
-        $media = $this->mediaRepository->find($key);
+        $media = $this->repository()->find($key);
 
         if (!$media) {
             // Broadcast model: mediary serves many clients and cannot know which

@@ -3,11 +3,9 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\MessageHandler;
 
-use Doctrine\ORM\EntityManagerInterface;
-use Survos\MediaBundle\Entity\BaseMedia;
 use Survos\MediaBundle\Message\DispatchBatchMessage;
-use Survos\MediaBundle\Repository\MediaRepository;
 use Survos\MediaBundle\Service\MediaBatchDispatcher;
+use Survos\MediaBundle\Service\MediaUpdateApplier;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Psr\Log\LoggerInterface;
 
@@ -16,7 +14,7 @@ final class DispatchBatchMessageHandler
 {
     public function __construct(
         private readonly MediaBatchDispatcher   $dispatcher,
-        private readonly EntityManagerInterface $em,
+        private readonly MediaUpdateApplier     $applier,
         private readonly LoggerInterface        $logger,
     ) {}
 
@@ -30,10 +28,7 @@ final class DispatchBatchMessageHandler
             $result = $this->dispatcher->dispatch($message->client, $message->urls, $extra);
 
             if (!$message->uploadOnly) {
-                /** @var MediaRepository $repo */
-                $repo = $this->em->getRepository(BaseMedia::class);
-                $repo->upsertFromBatchResult($result);
-                $this->em->flush();
+                $this->applier->applyBatch($result->rows);
             }
 
             $this->logger->info('Media batch dispatched', [

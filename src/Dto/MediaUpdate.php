@@ -5,6 +5,7 @@ namespace Survos\MediaBundle\Dto;
 
 use Survos\ImgproxyBundle\Dto\ImgproxyInfo;
 use Survos\MediaBundle\Service\MediaKeyService;
+use Survos\MediaBundle\Util\MediaIdentity;
 
 /**
  * One "something about this image changed" notification from mediary.
@@ -129,12 +130,20 @@ final class MediaUpdate
      *
      * Derived from originalUrl rather than trusting an id in the payload —
      * mediary serves many clients and has no idea what we call this row. Both
-     * sides use MediaKeyService, so this is the one identifier that is
-     * reproducible without coordination.
+     * sides use MediaIdentity, so this is the one identifier that is
+     * reproducible without coordination: MediaRegistry::ensureMedia() assigns
+     * it locally and mediary's AssetRepository::findOneByUrl() derives the same
+     * value for Asset::$id.
+     *
+     * NOT MediaKeyService::keyFromString() — that is the base64url of the URL,
+     * which is the ARCHIVE PATH component (see storageKeyProblem()), not a row
+     * id. Using it here meant every callback and every synced batch row looked
+     * up a key no media row has ever had, logged "no local row", and returned
+     * without writing anything.
      */
     public function mediaKey(): string
     {
-        return MediaKeyService::keyFromString($this->originalUrl);
+        return MediaIdentity::idFromOriginalUrl($this->originalUrl);
     }
 
     /**

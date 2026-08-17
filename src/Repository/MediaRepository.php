@@ -5,7 +5,6 @@ namespace Survos\MediaBundle\Repository;
 
 use Doctrine\ORM\EntityRepository;
 use Survos\MediaBundle\Contract\MediaSyncKeys;
-use Survos\MediaBundle\Dto\BatchDispatchResult;
 use Survos\MediaBundle\Entity\BaseMedia;
 
 final class MediaRepository extends EntityRepository
@@ -112,20 +111,9 @@ final class MediaRepository extends EntityRepository
         }
     }
 
-    public function upsertFromBatchResult(BatchDispatchResult $result): void
-    {
-        foreach ($result->media as $registration) {
-            $media = $this->find($registration->mediaKey);
-            assert($media, "Missing $registration->mediaKey");
-            if (!$media) {
-                continue;
-            }
-            // ugh, this is what Mapper is for!!
-            $media->status = $registration->status;
-            $media->smallUrl = $registration->smallUrl;
-            $media->s3Url = $registration->s3Url;
-            $media->storageKey = $registration->storageKey;
-        }
-        $this->getEntityManager()->flush();
-    }
+    // upsertFromBatchResult() lived here and was the second write path for
+    // mediary state — a blind overwrite that clobbered status regardless of
+    // ordering and asserted a local row exists (mediary broadcasts; often it
+    // does not). MediaUpdateApplier replaces it for both callers, sync and
+    // async, so push and pull cannot drift.
 }

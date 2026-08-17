@@ -8,7 +8,9 @@ use Survos\MediaBundle\Provider\FlickrProvider;
 use Survos\MediaBundle\Service\MediaBatchDispatcher;
 use Survos\MediaBundle\Service\MediaKeyService;
 use Survos\MediaBundle\MessageHandler\DispatchBatchMessageHandler;
+use Survos\MediaBundle\MessageHandler\MediaUpdatedMessageHandler;
 use Survos\MediaBundle\Service\MediaManager;
+use Survos\MediaBundle\Service\MediaUpdateApplier;
 use Survos\MediaBundle\Menu\MediaMenuSubscriber;
 use Survos\MediaBundle\Twig\MediaExtension;
 
@@ -42,6 +44,13 @@ return static function (ContainerConfigurator $container): void {
     $services->set(MediaKeyService::class);
     $services->set(MediaBatchDispatcher::class);
     $services->set(DispatchBatchMessageHandler::class);
+
+    // The mediary write path. Registered explicitly because only src/Command
+    // and src/Controller are auto-scanned — the applier and its message handler
+    // were added in fb66a618 and were silently absent from the container, so
+    // media:sync could not even boot once it depended on them.
+    $services->set(MediaUpdateApplier::class);
+    $services->set(MediaUpdatedMessageHandler::class);
 
     // Menu (only when tabler-bundle is installed; it's a suggest, not a hard require)
     if (class_exists(\Survos\TablerBundle\Event\MenuEvent::class)) {

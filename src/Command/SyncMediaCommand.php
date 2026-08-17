@@ -10,6 +10,7 @@ use Survos\MediaBundle\Message\DispatchBatchMessage;
 use Survos\MediaBundle\Repository\MediaRepository;
 use Survos\MediaBundle\Service\MediaBatchDispatcher;
 use Survos\MediaBundle\Service\MediaRegistry;
+use Survos\MediaBundle\Service\MediaUpdateApplier;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
 use Symfony\Component\Console\Command\Command;
@@ -28,6 +29,13 @@ final class SyncMediaCommand
         private readonly MediaBatchDispatcher   $dispatcher,
         private readonly MediaRegistry          $mediaRegistry,
         private readonly HttpClientInterface    $httpClient,
+        /**
+         * The same write path the async callback uses. Running it here — in a
+         * command, synchronously — is the whole point: whatever media:sync does
+         * to a row is exactly what MediaUpdatedMessageHandler will do to it off
+         * the queue, so a bug is reproducible in the foreground.
+         */
+        private readonly MediaUpdateApplier     $applier,
         private readonly ?MessageBusInterface   $bus = null,
     ) {
     }
@@ -78,8 +86,11 @@ final class SyncMediaCommand
             $extra  = $sync ? ['sync' => true] : [];
             $result = $this->dispatcher->dispatch($client, [$url], $extra);
             if (!$uploadOnly) {
-                $repo->upsertFromBatchResult($result);
-                $this->entityManager->flush();
+                $stats = $this->applier->applyBatch($result->rows);
+                if ($io->isVerbose()) {
+                    $io->writeln(sprintf('  applied %d, changed %d, skipped %d',
+                        $stats['applied'], $stats['changed'], $stats['skipped']));
+                }
             }
             $io->success('URL dispatched' . ($uploadOnly ? ' (upload-only)' : ' and synced'));
             return Command::SUCCESS;
@@ -190,8 +201,10 @@ final class SyncMediaCommand
                 // metadata keep provenance instead of becoming opaque blobs.
                 $result = $this->dispatcher->dispatch($client, $urls, $extra);
                 if (!$uploadOnly) {
-                    $repo->upsertFromBatchResult($result);
-                    $this->entityManager->flush();
+                    // Raw rows, not the parsed MediaRegistration[] — the batch
+                    // response is converging on the webhook payload, and the
+                    // applier is the side that knows how to read both.
+                    $this->applier->applyBatch($result->rows);
                 }
             } catch (\Symfony\Component\HttpClient\Exception\TransportException $e) {
                 // Timeout — log and continue, URLs remain status=new for next run
