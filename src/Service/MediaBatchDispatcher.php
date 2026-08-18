@@ -44,6 +44,18 @@ final class MediaBatchDispatcher
     ) {
     }
 
+    /** Covers TLS handshake + a cold container waking, independent of how many URLs are sent. */
+    private const int BATCH_TIMEOUT_BASE = 15;
+
+    /** Measured ~60ms/URL against production; 0.5s/URL is ~8x headroom for a loaded server. */
+    private const float BATCH_TIMEOUT_PER_URL = 0.5;
+
+    /** A batch slower than this is a server problem worth surfacing, not worth waiting out. */
+    private const int BATCH_TIMEOUT_CAP = 120;
+
+    /** mediary fetches each image inline on a sync request — a different kind of wait. */
+    private const int SYNC_TIMEOUT = 120;
+
     /**
      * Dispatch a batch of ImportEnrichmentContext DTOs to mediary.
      *
@@ -135,10 +147,21 @@ final class MediaBatchDispatcher
             $options['proxy'] = 'http://127.0.0.1:7080';
         }
 
-        // Sync downloads can take 30-60s for large images — use a generous timeout
+        // Registration is linear in batch size, so a single constant is wrong by construction: 10s
+        // was fine against a mediary on localhost and fails against a real one. A cold dokku
+        // container plus 100 URLs timed out at 10s having received 0 bytes, while 16 URLs to the
+        // same host took 1.0s — the server was never the problem. Scale with the work instead, so
+        // changing --batch-size can't silently reintroduce this.
+        //
+        // Sync downloads are different in kind (mediary fetches each image inline, 30-60s for large
+        // ones), so they keep their own generous floor.
         $isSyncRequest = !empty($extra['sync']);
-        $options['timeout']      = $isSyncRequest ? 120 : 10;
-        $options['max_duration'] = $isSyncRequest ? 120 : 10;
+        $timeout = $isSyncRequest
+            ? self::SYNC_TIMEOUT
+            : min(self::BATCH_TIMEOUT_CAP, self::BATCH_TIMEOUT_BASE + count($urls) * self::BATCH_TIMEOUT_PER_URL);
+
+        $options['timeout']      = $timeout;
+        $options['max_duration'] = $timeout;
 
         $response = $this->httpClient->request(
             'POST',
