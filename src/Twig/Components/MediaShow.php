@@ -4,15 +4,18 @@ declare(strict_types=1);
 namespace Survos\MediaBundle\Twig\Components;
 
 use Survos\MediaBundle\Dto\MediaSyncItem;
-use Survos\MediaBundle\Dto\MediaEnrichment;
-use Survos\MediaBundle\Interface\EnrichmentInterface;
 use Survos\MediaBundle\Interface\MediaSyncInterface;
 use Survos\IiifBundle\Service\IiifUrl;
 use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 
 /**
- * Generic show-page component for any entity that implements
- * EnrichmentInterface + MediaSyncInterface.
+ * Generic show-page component for a media-bearing entity.
+ *
+ * The entity only has to expose getSourceMeta(): array. getMediaSync() is used
+ * when it also implements MediaSyncInterface. It used to be typed as
+ * EnrichmentInterface, but that interface is deprecated as of 2.1 -- requiring
+ * it here meant an app could not act on its own deprecation warning without
+ * this component rejecting the entity with a TypeError.
  *
  * Renders: image preview, claims-driven tabs, source metadata, and task controls.
  *
@@ -46,8 +49,8 @@ use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 #[AsTwigComponent('MediaShow', template: '@SurvosMedia/components/MediaShow.html.twig')]
 final class MediaShow
 {
-    /** The entity — must implement EnrichmentInterface. MediaSyncInterface is optional. */
-    public EnrichmentInterface $entity;
+    /** The entity — must expose getSourceMeta(). MediaSyncInterface is optional. */
+    public object $entity;
 
     /** Pre-resolved proxied/resized image URL (controller should build this). */
     public ?string $imageUrl = null;
@@ -91,12 +94,7 @@ final class MediaShow
 
     public function sourceMeta(): array
     {
-        return $this->entity->getSourceMeta();
-    }
-
-    public function mediaEnrichment(): ?MediaEnrichment
-    {
-        return $this->entity->getMediaEnrichmentDto();
+        return method_exists($this->entity, 'getSourceMeta') ? $this->entity->getSourceMeta() : [];
     }
 
     /** True when there's anything to show in the image card. */
