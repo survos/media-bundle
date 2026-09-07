@@ -18,6 +18,7 @@
         "survos/iiif-bundle": "^2.7",
         "survos/imgproxy-bundle": "^2.7",
         "survos/kit-bundle": "^2.5",
+        "survos/state-bundle": "^2.0",
         "survos/tabler-bundle": "^2.5",
         "symfony/config": "^8.1",
         "symfony/dependency-injection": "^8.1",
@@ -29,7 +30,6 @@
         "twig/twig": "^3.4|^4.0"
     },
     "suggest": {
-        "survos/state-bundle": "Drives the media probe lifecycle as an async Symfony workflow (imgproxy /info enrichment)",
         "symfony/ai-platform": "Required for #[With] JSON Schema constraints on MediaSyncItem properties"
     },
     "require-dev": {

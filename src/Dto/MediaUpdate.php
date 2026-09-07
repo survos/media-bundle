@@ -215,8 +215,24 @@ final class MediaUpdate
         if ($path === '') {
             return null;
         }
-        // Hetzner virtual-hosted style puts the bucket in the host, so the path
-        // is already the key. Path-style would prefix it with the bucket name.
+        // Virtual-hosted style puts the bucket in the host, so the path IS the key.
+        // Our archive URLs are PATH-style though —
+        // `https://fsn1.your-objectstorage.com/museado/orig/1b/fa/….jpg` — so the raw path
+        // carries the bucket and this returned `museado/orig/…`, a key no object has. That
+        // silently poisons storageKey for anything that later resolves it, and
+        // storageKeyProblem() can only warn about the result.
+        //
+        // Currently masked: mediary sends storageKey explicitly on both the batch response and
+        // the asset.analyzed webhook, so this fallback is unused — which is exactly why it could
+        // rot unnoticed until the day it is needed.
+        //
+        // Strip a leading segment only when what remains is unmistakably an archive key
+        // (`orig/…` legacy or `o/…` reversible). Anything else is left alone rather than
+        // guessed at: for a field that is immutable once set, a wrong value is worse than none.
+        if (preg_match('#^[^/]+/((?:orig|o)/.+)$#', $path, $m) === 1) {
+            return $m[1];
+        }
+
         return $path;
     }
 }

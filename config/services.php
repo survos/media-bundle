@@ -7,7 +7,6 @@ use Survos\MediaBundle\Provider\YouTubeProvider;
 use Survos\MediaBundle\Provider\FlickrProvider;
 use Survos\MediaBundle\Service\MediaBatchDispatcher;
 use Survos\MediaBundle\Service\MediaKeyService;
-use Survos\MediaBundle\MessageHandler\DispatchBatchMessageHandler;
 use Survos\MediaBundle\Service\MediaManager;
 use Survos\MediaBundle\Service\MediaUpdateApplier;
 use Survos\MediaBundle\Menu\MediaMenuSubscriber;
@@ -42,7 +41,6 @@ return static function (ContainerConfigurator $container): void {
     // Commands — auto-registered from src/Command by AbstractSurvosBundle::loadExtension()
     $services->set(MediaKeyService::class);
     $services->set(MediaBatchDispatcher::class);
-    $services->set(DispatchBatchMessageHandler::class);
 
     // The mediary write path. Registered explicitly because the auto-scan covers only
     // conventional directories — the applier was added in fb66a618 and was silently absent

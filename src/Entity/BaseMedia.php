@@ -20,6 +20,8 @@ use Survos\DataContracts\Workflow\ImageSubjectInterface;
 use Survos\DataContracts\Workflow\WorkflowSubjectInterface;
 use Survos\MediaBundle\Repository\MediaRepository;
 use Survos\MediaBundle\Trait\HasAiVisionTrait;
+use Survos\StateBundle\Traits\MarkingInterface;
+use Survos\StateBundle\Traits\MarkingTrait;
 use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: MediaRepository::class)]
@@ -37,10 +39,26 @@ use Symfony\Component\Serializer\Attribute\Groups;
 )]
 #[EntityMeta(icon: 'mdi:video-image', group: 'Media')]
 #[RouteIdentity(field: 'id')]
-abstract class BaseMedia implements RouteParametersInterface, WorkflowSubjectInterface, ImageSubjectInterface, ContextSubjectInterface
+abstract class BaseMedia implements RouteParametersInterface, WorkflowSubjectInterface, ImageSubjectInterface, ContextSubjectInterface, MarkingInterface
 {
     use RouteIdentityTrait;
     use HasAiVisionTrait;
+    /**
+     * $marking is OURS; $status below is MEDIARY'S, reflected.
+     *
+     * They are deliberately two fields. `marking` tracks this row's own lifecycle — have we sent
+     * it, did the send succeed — and is locally ordered, because we know when we dispatched.
+     * `status` mirrors the remote Asset's place (new/iiif/archived/informed/…), arrives out of
+     * order over webhooks, and therefore keeps the rank guard in MediaUpdateApplier. Collapsing
+     * them is what produced three hand-rolled copies of mediary's place list: this trait's
+     * predecessor comment on `status` ("until the AssetWorkflow Constants are shared"),
+     * MediaUpdateApplier::STATUS_RANK, and harvest's DatasetEnrichGuard::TERMINAL.
+     *
+     * state-bundle moved from `suggest` to `require` for this: every Media row exists to be
+     * published to mediary, so it has a lifecycle whether or not we model it. It was optional
+     * back when this bundle was a generic liip-imagine-era media manager.
+     */
+    use MarkingTrait;
 
     #[ORM\Id]
     #[ORM\Column(length: 32)]

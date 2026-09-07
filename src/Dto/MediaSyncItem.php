@@ -464,6 +464,32 @@ final class MediaSyncItem
         ], static fn($v) => $v !== null && $v !== [] && $v !== '');
     }
 
+    /**
+     * The URL this item's local media row is IDENTIFIED by: what
+     * {@see \Survos\MediaBundle\Service\MediaRegistry::ensureSyncItem()} hashes into the row
+     * id and stores as externalUrl. It is therefore the ONLY URL a mediary batch
+     * may be keyed by, because MediaUpdate::mediaKey() resolves the response row
+     * by hashing the URL back again.
+     *
+     * Deliberately NOT $url, and the two really do differ. afterMap() derives $url
+     * preferring iiifBase, then imageUrl, then thumbnailUrl; this prefers the raw
+     * imageUrl outright. mus/cleveland publishes iiifBase and thumbnailUrl as
+     * `…_web.jpg` but imageUrl as `…_print.jpg`, so for every one of its rows the
+     * two disagree.
+     *
+     * That is why this is a named method and not an inline expression. A caller
+     * that registers a row here and then dispatches $item->url sends mediary a URL
+     * whose xxh3 matches no local row: every response row lands in
+     * MediaUpdateApplier's "no local row" branch, and the media sits at
+     * status=new with a null s3Url forever without one error or warning. Callers
+     * building a batch payload should key it off BaseMedia::$externalUrl — which
+     * IS this value, by construction — rather than re-deriving a URL themselves.
+     */
+    public function identityUrl(): ?string
+    {
+        return $this->imageUrl ?? $this->preferredUrl();
+    }
+
     public function preferredUrl(): ?string
     {
         if ($this->url !== null && $this->url !== '') {

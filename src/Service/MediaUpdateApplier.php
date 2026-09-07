@@ -74,9 +74,30 @@ final class MediaUpdateApplier
      */
     public function apply(MediaUpdate $update, bool $flush = true): array
     {
+        return $this->applyUpdate($update, $flush) ?? [];
+    }
+
+    /**
+     * As {@see apply()}, but distinguishing the two outcomes apply() flattens
+     * into an empty array:
+     *
+     *   null  the update never reached a local row (no originalUrl, or no row
+     *         with that mediaKey)
+     *   []    a local row was found and already agreed with the update
+     *
+     * That distinction is not academic. Collapsing them is what let a whole
+     * dataset dispatch, register 44 media rows, apply nothing to any of them and
+     * report success: the caller saw "applied 44, changed 0" and read it as
+     * "already up to date" when it actually meant "not one of these rows exists
+     * under the key mediary answered with".
+     *
+     * @return string[]|null
+     */
+    private function applyUpdate(MediaUpdate $update, bool $flush = true): ?array
+    {
         if ($update->originalUrl === '') {
             $this->logger->warning('media update: no originalUrl, dropping');
-            return [];
+            return null;
         }
 
         $key = $update->mediaKey();
@@ -91,7 +112,7 @@ final class MediaUpdateApplier
                 'key' => $key,
                 'url' => $update->originalUrl,
             ]);
-            return [];
+            return null;
         }
 
         if ($problem = $update->storageKeyProblem()) {
@@ -161,17 +182,34 @@ final class MediaUpdateApplier
      * Apply a whole mediary batch response (`{"media":[...]}`) in one go.
      * Flushes once at the end rather than per row.
      *
-     * @return array{applied:int, changed:int, skipped:int}
+     * `applied` counts rows that REACHED a local media row; `unmatched` counts
+     * rows whose mediaKey resolved to nothing here. It used to count every row
+     * regardless, which made the return value unable to express the one failure
+     * that matters — a caller sending URLs that are not its rows' identity URLs
+     * got "applied: 44, changed: 0" and no warning of any kind.
+     *
+     * unmatched > 0 is legitimate for a broadcast consumer (mediary serves many
+     * clients), but is a BUG for any caller that registered the rows it is
+     * sending: see DatasetMediaDispatcher. Callers that know every row is theirs
+     * should treat a non-zero count as an error.
+     *
+     * applied + unmatched + skipped == count($rows).
+     *
+     * @return array{applied:int, changed:int, skipped:int, unmatched:int}
      */
     public function applyBatch(array $rows, bool $flush = true): array
     {
-        $applied = $changed = $skipped = 0;
+        $applied = $changed = $skipped = $unmatched = 0;
         foreach ($rows as $row) {
             if (!is_array($row)) {
                 $skipped++;
                 continue;
             }
-            $fields = $this->apply(MediaUpdate::fromBatchRow($row), flush: false);
+            $fields = $this->applyUpdate(MediaUpdate::fromBatchRow($row), flush: false);
+            if ($fields === null) {
+                $unmatched++;
+                continue;
+            }
             $applied++;
             if ($fields !== []) {
                 $changed++;
@@ -180,7 +218,13 @@ final class MediaUpdateApplier
         if ($flush) {
             $this->em->flush();
         }
-        return ['applied' => $applied, 'changed' => $changed, 'skipped' => $skipped];
+
+        return [
+            'applied' => $applied,
+            'changed' => $changed,
+            'skipped' => $skipped,
+            'unmatched' => $unmatched,
+        ];
     }
 
     private function isForwardProgress(?string $current, string $incoming): bool

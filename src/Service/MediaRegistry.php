@@ -96,7 +96,8 @@ final class MediaRegistry
     public function ensureSyncItem(MediaSyncItem $item, ?string $class = null, bool $flush = false): BaseMedia
     {
         $class ??= Photo::class;
-        $url = $item->imageUrl ?? $item->preferredUrl();
+        // Single named definition of the row's identity URL — see MediaSyncItem::identityUrl().
+        $url = $item->identityUrl();
 
         if ($url === null) {
             throw new InvalidArgumentException('MediaSyncItem must have an imageUrl, iiifManifest-resolved image URL, iiifBase, or thumbnailUrl.');

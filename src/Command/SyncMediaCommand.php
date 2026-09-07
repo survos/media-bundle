@@ -6,7 +6,6 @@ namespace Survos\MediaBundle\Command;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Survos\MediaBundle\Entity\BaseMedia;
-use Survos\MediaBundle\Message\DispatchBatchMessage;
 use Survos\MediaBundle\Repository\MediaRepository;
 use Survos\MediaBundle\Service\MediaBatchDispatcher;
 use Survos\MediaBundle\Service\MediaRegistry;
@@ -21,7 +20,22 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use function basename;
 use function getcwd;
 
-#[AsCommand('media:sync', 'Sync local BaseMedia rows (status=new) to mediary server')]
+/**
+ * LEGACY / DEBUG ENTRY POINT — part of the two-command bridge (media:ensure + media:sync) that
+ * DatasetMediaDispatcher replaced. The dataset workflow's `dispatch` transition now publishes to
+ * Mediary directly and does not call this.
+ *
+ * The bridge existed because there was no callback: with no tunnel, Mediary could not tell us when
+ * an asset finished, so we pushed and re-read state instead. With callbacks live, a media row is a
+ * projection of Mediary's own AssetWorkflow, not something to drive from here.
+ *
+ * Running it by hand applies no dispatch limit, updates no marking, and moves rows out of `new`
+ * from outside the workflow — which changes DatasetEnrichGuard's pending count without the
+ * transition that should accompany it. Keep it for re-poking a few stuck rows.
+ *
+ * Full rationale: harvest docs/deprecated.md.
+ */
+#[AsCommand('media:sync', '[legacy/debug] Sync local BaseMedia rows (status=new) to mediary. Real runs go through the DatasetInfo workflow dispatch transition — see the docblock.')]
 final class SyncMediaCommand
 {
     public function __construct(
@@ -183,14 +197,11 @@ final class SyncMediaCommand
             }
         }
 
-        if ($async && $this->bus !== null) {
-            $this->bus->dispatch(new DispatchBatchMessage(
-                client:     $client,
-                urls:       $urls,
-                contextMap: $contextMap,
-                uploadOnly: $uploadOnly,
-            ));
-        } else {
+        // $async no longer forks to a message: DispatchBatchMessage is gone. It existed to keep this
+        // slow HTTP call off the foreground command loop, but the only supported caller now is the
+        // dataset workflow's dispatch transition, which already runs on a consumer. Kept as a flag
+        // rather than removed so existing invocations don't hard-fail; it is a no-op.
+        {
             try {
                 $extra = $contextMap !== [] ? ['context' => $contextMap] : [];
                 if ($sync) {
