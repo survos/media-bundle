@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Survos\MediaBundle\Service;
 
 use InvalidArgumentException;
+use Survos\DataContracts\Util\MediaKeyService;
 use Survos\DataContracts\Vocabulary\MediaPreset;
 use Survos\MediaBundle\Entity\BaseMedia;
 use function rtrim;

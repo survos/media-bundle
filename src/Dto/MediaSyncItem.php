@@ -8,7 +8,7 @@ use Survos\DataContracts\Dto\Claim\ClaimDTO;
 use Survos\DataContracts\Vocabulary\ItemField;
 use Survos\FieldBundle\Attribute\Map;
 use Survos\IiifBundle\Service\IiifUrl;
-use Symfony\AI\Platform\Contract\JsonSchema\Attribute\With;
+use Symfony\AI\Platform\Contract\JsonSchema\Attribute\Schema;
 
 /**
  * Typed DTO carrying all metadata needed to register a media asset with mediary.
@@ -22,7 +22,7 @@ use Symfony\AI\Platform\Contract\JsonSchema\Attribute\With;
  *
  * PHPDoc provides the JSON Schema description via PropertyInfoDescriber.
  * The dc_term is noted in each docblock; when Symfony AI adds `description:`
- * to #[With], it should move there.
+ * to #[Schema], it should move there.
  *
  * Usage:
  *   $item = $dtoMapper->mapRecord($normalizedRow, MediaSyncItem::class);
@@ -79,7 +79,7 @@ final class MediaSyncItem
      * @var string|null
      */
     #[Map(source: 'reuse_allowed', facet: true)]
-    #[With(enum: ['no restrictions', 'creative commons', 'contact host', 'all rights reserved'])]
+    #[Schema(enum: ['no restrictions', 'creative commons', 'contact host', 'all rights reserved'])]
     public ?string $reuseAllowed = null;
 
     /**
@@ -122,7 +122,7 @@ final class MediaSyncItem
      * Not in the normalized row — set externally before dispatch.
      * @var string|null
      */
-    #[With(enum: ['dc', 'euro', 'pp', 'mds', 'smith'])]
+    #[Schema(enum: ['dc', 'euro', 'pp', 'mds', 'smith'])]
     public ?string $aggregator = null;
 
     // ── Core Dublin Core fields ───────────────────────────────────────────
@@ -163,7 +163,7 @@ final class MediaSyncItem
      * @var string|null
      */
     #[Map(source: 'type_of_resource')]
-    #[With(enum: ['Text', 'StillImage', 'PhysicalObject', 'Sound', 'MovingImage', 'Dataset', 'Collection'])]
+    #[Schema(enum: ['Text', 'StillImage', 'PhysicalObject', 'Sound', 'MovingImage', 'Dataset', 'Collection'])]
     public mixed $type = null;
 
     /**

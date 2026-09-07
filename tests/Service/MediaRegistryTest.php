@@ -1,79 +1,79 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Tests\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\Persistence\ObjectRepository;
+use Doctrine\ORM\EntityRepository;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Survos\DataContracts\Util\MediaIdentity;
 use Survos\MediaBundle\Entity\BaseMedia;
 use Survos\MediaBundle\Service\MediaRegistry;
+use Survos\MediaBundle\Service\MediaUrlGenerator;
 
+/**
+ * This file previously hand-rolled anonymous classes implementing EntityManagerInterface and
+ * ObjectRepository. Both had drifted out of signature compatibility with Doctrine
+ * (`find(mixed $id): ?object`), so the test was a fatal error, not a failure -- and it asserted
+ * against MediaRegistry::idFromUrl(), a method that does not exist on that class. None of it was
+ * noticed because bundle tests were outside the root phpunit testsuite and never ran.
+ *
+ * Mocks are generated from the current interface, so this class cannot silently rot the same way:
+ * if Doctrine changes a signature, the mock changes with it.
+ */
+#[CoversClass(MediaRegistry::class)]
 final class MediaRegistryTest extends TestCase
 {
-    public function testEnsureMediaWithUrlDoesNotFail(): void
+    private const URL = 'https://example.com/image.jpg';
+
+    private function registry(?BaseMedia $existing = null): MediaRegistry
     {
-        $repository = new class implements ObjectRepository {
-            public function find($id) { return null; }
-            public function findAll() { return []; }
-            public function findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null) { return []; }
-            public function findOneBy(array $criteria) { return null; }
-            public function getClassName() { return BaseMedia::class; }
-        };
+        // Stubs, not mocks: nothing here verifies interactions, and PHPUnit 13 emits a notice for
+        // a mock with no configured expectations. Note getRepository() declares Doctrine\ORM\
+        // EntityRepository as its return type, not the broader ObjectRepository the old hand-rolled
+        // double implemented -- doubling that interface raises IncompatibleReturnValueException.
+        $repository = $this->createStub(EntityRepository::class);
+        $repository->method('findOneBy')->willReturn($existing);
 
-        $em = new class($repository) implements EntityManagerInterface {
-            public function __construct(private ObjectRepository $repository) {}
-            public function getRepository($className) { return $this->repository; }
-            public function persist($object) {}
-            public function flush() {}
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('getRepository')->willReturn($repository);
 
-            // --- Unused methods ---
-            public function find($className, $id) {}
-            public function remove($object) {}
-            public function merge($object) {}
-            public function clear($objectName = null) {}
-            public function detach($object) {}
-            public function refresh($object) {}
-            public function getClassMetadata($className) {}
-            public function getMetadataFactory() {}
-            public function initializeObject($obj) {}
-            public function contains($object) {}
-            public function getConnection() {}
-            public function getExpressionBuilder() {}
-            public function beginTransaction() {}
-            public function transactional($func) {}
-            public function commit() {}
-            public function rollback() {}
-            public function createQuery($dql = '') {}
-            public function createNamedQuery($name) {}
-            public function createNativeQuery($sql, $rsm) {}
-            public function createNamedNativeQuery($name) {}
-            public function createQueryBuilder() {}
-            public function getReference($entityName, $id) {}
-            public function getPartialReference($entityName, $identifier) {}
-            public function close() {}
-            public function copy($entity, $deep = false) {}
-            public function lock($entity, $lockMode, $lockVersion = null) {}
-            public function getEventManager() {}
-            public function getConfiguration() {}
-            public function isOpen() {}
-            public function getUnitOfWork() {}
-            public function newHydrator($hydrationMode) {}
-            public function getHydrator($hydrationMode) {}
-            public function getProxyFactory() {}
-            public function getFilters() {}
-            public function isFiltersStateClean() {}
-            public function hasFilters() {}
-        };
+        // Two constructor args since MediaUrlGenerator was added; the old test passed one and
+        // had been an ArgumentCountError ever since.
+        return new MediaRegistry($em, new MediaUrlGenerator('https://media.example.org', '/resize/{preset}/{id}'));
+    }
 
-        $registry = new MediaRegistry($em);
-
-        $media = $registry->ensureMedia('https://example.com/image.jpg');
+    #[Test]
+    public function ensureMediaDerivesItsIdFromMediaIdentity(): void
+    {
+        $media = $this->registry()->ensureMedia(self::URL);
 
         self::assertInstanceOf(BaseMedia::class, $media);
+
+        // The id is xxh3 of the URL, computed in data-contracts so mediary derives the same value
+        // in its own process without either side depending on the other. If this ever stops
+        // matching, clients and mediary are silently talking about different images.
+        self::assertSame(MediaIdentity::idFromOriginalUrl(self::URL), $media->id);
+    }
+
+    #[Test]
+    public function ensureMediaIsIdempotentForTheSameUrl(): void
+    {
         self::assertSame(
-            MediaRegistry::idFromUrl('https://example.com/image.jpg'),
-            $media->id
+            $this->registry()->ensureMedia(self::URL)->id,
+            $this->registry()->ensureMedia(self::URL)->id,
         );
+    }
+
+    #[Test]
+    public function newMediaStartsAtTheWorkflowInitialPlace(): void
+    {
+        // Seeded in the constructor. Without it the row persists with a null marking, the kickoff
+        // listener sees a marking that is not the initial place, and the workflow never starts --
+        // silently, because a null workflow is also the ordinary "no workflow here" answer.
+        self::assertSame('new', $this->registry()->ensureMedia(self::URL)->marking);
     }
 }
