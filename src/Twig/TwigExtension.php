@@ -2,6 +2,8 @@
 
 namespace Survos\MediaBundle\Twig;
 
+use Survos\DataContracts\Vocabulary\MediaPreset;
+
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
@@ -25,11 +27,11 @@ class TwigExtension extends AbstractExtension
     public function getFunctions(): array
     {
         return [
-            new TwigFunction('media_presets', fn() => MediaUrlGenerator::PRESETS),
-            new TwigFunction('media_preset', fn(string $name) => MediaUrlGenerator::PRESETS[$name] ?? null),
-            new TwigFunction('media_preset_small', fn() => MediaUrlGenerator::PRESET_SMALL),
-            new TwigFunction('media_preset_medium', fn() => MediaUrlGenerator::PRESET_MEDIUM),
-            new TwigFunction('media_preset_large', fn() => MediaUrlGenerator::PRESET_LARGE),
+            new TwigFunction('media_presets', fn() => MediaPreset::PRESETS),
+            new TwigFunction('media_preset', fn(string $name) => MediaPreset::PRESETS[$name] ?? null),
+            new TwigFunction('media_preset_small', fn() => MediaPreset::SMALL),
+            new TwigFunction('media_preset_medium', fn() => MediaPreset::MEDIUM),
+            new TwigFunction('media_preset_large', fn() => MediaPreset::LARGE),
         ];
     }
 }
