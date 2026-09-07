@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Survos\MediaBundle\Repository;
 
 use Doctrine\ORM\EntityRepository;
-use Survos\MediaBundle\Contract\MediaSyncKeys;
+use Survos\DataContracts\Vocabulary\MediaSyncKeys;
 use Survos\MediaBundle\Entity\BaseMedia;
 
 final class MediaRepository extends EntityRepository

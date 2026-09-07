@@ -7,7 +7,7 @@ namespace Survos\MediaBundle\Trait;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Survos\FieldBundle\Attribute\Field;
-use Survos\MediaBundle\Dto\MediaEnrichment;
+use Survos\DataContracts\Dto\MediaEnrichment;
 use Symfony\Component\Serializer\Attribute\Groups;
 
 /**

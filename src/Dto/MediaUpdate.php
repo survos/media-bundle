@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Survos\MediaBundle\Dto;
 
 use Survos\ImgproxyBundle\Dto\ImgproxyInfo;
-use Survos\MediaBundle\Service\MediaKeyService;
-use Survos\MediaBundle\Util\MediaIdentity;
+use Survos\DataContracts\Util\MediaKeyService;
+use Survos\DataContracts\Util\MediaIdentity;
 
 /**
  * One "something about this image changed" notification from mediary.

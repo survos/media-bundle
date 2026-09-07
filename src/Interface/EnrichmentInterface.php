@@ -19,7 +19,7 @@ interface EnrichmentInterface
     public function getSourceMeta(): array;
 
     /** Typed aggregate of all AI task results. Consumed by MediaShow "Media Enrichment" tab. */
-    public function getMediaEnrichmentDto(): ?\Survos\MediaBundle\Dto\MediaEnrichment;
+    public function getMediaEnrichmentDto(): ?\Survos\DataContracts\Dto\MediaEnrichment;
 
     /**
      * Best available OCR text for this entity — highest-confidence ai:ocrText claim,

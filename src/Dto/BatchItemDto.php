@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Dto;
 
-use Survos\MediaBundle\Contract\MediaSyncKeys;
+use Survos\DataContracts\Vocabulary\MediaSyncKeys;
 
 /**
  * Per-URL transport/context within a {@see BatchPayloadDto}.

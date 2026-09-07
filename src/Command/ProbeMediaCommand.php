@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Survos\MediaBundle\Command;
 
 use Survos\MediaBundle\Service\MediaBatchDispatcher;
-use Survos\MediaBundle\Util\MediaIdentity;
+use Survos\DataContracts\Util\MediaIdentity;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;

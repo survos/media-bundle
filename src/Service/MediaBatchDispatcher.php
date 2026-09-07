@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Service;
 
-use Survos\MediaBundle\Contract\MediaSyncKeys;
+use Survos\DataContracts\Vocabulary\MediaSyncKeys;
 use Survos\MediaBundle\Dto\BatchDispatchResult;
 use Survos\MediaBundle\Dto\ImportEnrichmentContext;
 use Survos\MediaBundle\Dto\MediaProbeResult;

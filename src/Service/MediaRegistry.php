@@ -10,7 +10,7 @@ use Survos\MediaBundle\Dto\MediaSyncItem;
 use Survos\MediaBundle\Entity\BaseMedia;
 use Survos\MediaBundle\Entity\Photo;
 use Survos\MediaBundle\Service\MediaUrlGenerator;
-use Survos\MediaBundle\Util\MediaIdentity;
+use Survos\DataContracts\Util\MediaIdentity;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use SplFileInfo;
 use function is_string;

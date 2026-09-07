@@ -6,7 +6,7 @@ use Survos\MediaBundle\EventListener\MediaPostLoadListener;
 use Survos\MediaBundle\Provider\YouTubeProvider;
 use Survos\MediaBundle\Provider\FlickrProvider;
 use Survos\MediaBundle\Service\MediaBatchDispatcher;
-use Survos\MediaBundle\Service\MediaKeyService;
+use Survos\DataContracts\Util\MediaKeyService;
 use Survos\MediaBundle\Service\MediaManager;
 use Survos\MediaBundle\Service\MediaUpdateApplier;
 use Survos\MediaBundle\Menu\MediaMenuSubscriber;
