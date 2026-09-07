@@ -13,7 +13,7 @@
         "doctrine/dbal": "^4.3.2",
         "doctrine/doctrine-bundle": "^3.0",
         "league/flysystem": "^3.0",
-        "survos/data-contracts": "^2.5",
+        "survos/data-contracts": "^2.27.1",
         "survos/field-bundle": "^2.5",
         "survos/iiif-bundle": "^2.7",
         "survos/imgproxy-bundle": "^2.7",
