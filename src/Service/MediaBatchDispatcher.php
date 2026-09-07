@@ -17,6 +17,12 @@ final class MediaBatchDispatcher
         private readonly HttpClientInterface $httpClient,
         #[Autowire('%env(MEDIARY_ENDPOINT)%')] private readonly string $mediaServerBaseUrl,
         /**
+         * Shared secret for mediary's JSON-RPC methods. /api/v1 is PUBLIC_ACCESS at mediary's
+         * firewall by design -- that is what lets an unauthenticated client reach it at all --
+         * so each method authenticates on this instead. Must match mediary's MEDIARY_API_TOKEN.
+         */
+        #[Autowire('%env(default::MEDIARY_API_TOKEN)%')] private readonly ?string $apiToken = null,
+        /**
          * Absolute URL mediary POSTs to when an asset finishes analysis.
          *
          * THIS IS THE LINK THAT WAS MISSING. mediary has always fired a webhook
@@ -182,20 +188,14 @@ final class MediaBatchDispatcher
      */
     public function probe(string $assetId): MediaProbeResult
     {
-        $options = [];
-        if (str_contains($this->mediaServerBaseUrl, '.wip')) {
-            $options['proxy'] = 'http://127.0.0.1:7080';
+        $rows = $this->probeAssets([$assetId]);
+        $row = $rows[0] ?? null;
+
+        if ($row === null) {
+            throw new RuntimeException(sprintf('Media server has no asset %s.', $assetId));
         }
 
-        $url = sprintf('%s/fetch/media/%s', rtrim($this->mediaServerBaseUrl, '/'), rawurlencode($assetId));
-        $response = $this->httpClient->request('GET', $url, $options);
-        $status = $response->getStatusCode();
-
-        if ($status !== 200) {
-            throw new RuntimeException(sprintf('Media server probe failed (%d) for %s.', $status, $assetId));
-        }
-
-        return MediaProbeResult::fromArray($response->toArray());
+        return MediaProbeResult::fromArray($row);
     }
 
     /**
@@ -206,28 +206,76 @@ final class MediaBatchDispatcher
      */
     public function probeMany(array $assetIds): array
     {
+        return array_map(MediaProbeResult::fromArray(...), $this->probeAssets($assetIds));
+    }
+
+    /**
+     * Both probes go through JSON-RPC `probeAssets`, not the old REST routes.
+     *
+     * GET /fetch/media/{id} and POST /fetch/media/by-ids are behind mediary's session
+     * firewall: its security.yaml makes only ^/[^/]+/batch$, ^/api/v1$ and ^/api/claim-store/
+     * PUBLIC_ACCESS, and everything else falls through `- { path: ^/, roles: ROLE_USER }`.
+     * An unauthenticated client therefore got a 302 to /login -- and because Symfony's
+     * HttpClient follows redirects, the failure did not even surface as a redirect: it came
+     * back 200 with the login page's HTML and blew up inside toArray() as a JSON parse error,
+     * which reads like mediary returned garbage rather than like we were never let in.
+     *
+     * /api/v1 is public at the firewall, and mediary's ProbeAssetsMethod serves it from the
+     * same AssetProbeService the REST routes used, so the rows are identical by construction.
+     *
+     * @param list<string> $assetIds
+     * @return list<array<string,mixed>>
+     */
+    private function probeAssets(array $assetIds): array
+    {
         $ids = array_values(array_filter($assetIds, static fn (string $id): bool => $id !== ''));
         if ($ids === []) {
             return [];
         }
 
         $options = [
-            'json' => ['ids' => $ids],
+            'json' => [
+                'jsonrpc' => '2.0',
+                'method' => 'probeAssets',
+                'params' => ['ids' => $ids, 'token' => (string) $this->apiToken],
+                'id' => uniqid('probeAssets', true),
+            ],
         ];
+
+        // Same .wip rule the batch push uses -- a local mediary resolves only through the
+        // Symfony CLI proxy, and one path working while the other silently cannot reach the
+        // server is exactly the split that hides problems.
         if (str_contains($this->mediaServerBaseUrl, '.wip')) {
             $options['proxy'] = 'http://127.0.0.1:7080';
         }
 
-        $url = sprintf('%s/fetch/media/by-ids', rtrim($this->mediaServerBaseUrl, '/'));
-        $response = $this->httpClient->request('POST', $url, $options);
-        $status = $response->getStatusCode();
+        $response = $this->httpClient->request(
+            'POST',
+            rtrim($this->mediaServerBaseUrl, '/') . '/api/v1',
+            $options,
+        );
 
+        $status = $response->getStatusCode();
         if ($status !== 200) {
-            throw new RuntimeException(sprintf('Media server batch probe failed (%d).', $status));
+            throw new RuntimeException(sprintf('Media server probe failed (%d).', $status));
         }
 
-        /** @var list<array<string,mixed>> $rows */
-        $rows = $response->toArray();
-        return array_map(MediaProbeResult::fromArray(...), $rows);
+        /** @var array<string,mixed> $body */
+        $body = $response->toArray(false);
+
+        // A JSON-RPC error is a 200 with an `error` member, so checking the status alone would
+        // read a failure as an empty result.
+        if (isset($body['error'])) {
+            throw new RuntimeException(sprintf(
+                'Media server probe failed: %s (%s).',
+                (string) ($body['error']['message'] ?? 'unknown error'),
+                (string) ($body['error']['code'] ?? '-'),
+            ));
+        }
+
+        /** @var list<array<string,mixed>> $assets */
+        $assets = $body['result']['assets'] ?? [];
+
+        return $assets;
     }
 }

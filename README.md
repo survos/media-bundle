@@ -227,8 +227,23 @@ if ($probe->isComplete()) {
 }
 ```
 
-- `probe(string $assetId): MediaProbeResult` → `GET /fetch/media/{id}`
-- `probeMany(array $assetIds): array<MediaProbeResult>` → `POST /fetch/media/by-ids`
+- `probe(string $assetId): MediaProbeResult`
+- `probeMany(array $assetIds): array<MediaProbeResult>`
+
+Both go through JSON-RPC `probeAssets` on `POST /api/v1`, and both need `MEDIARY_API_TOKEN` to
+match mediary's.
+
+> **They used to call `GET /fetch/media/{id}` and `POST /fetch/media/by-ids`, which no API client
+> could reach.** mediary's security.yaml grants PUBLIC_ACCESS to only `^/[^/]+/batch$`,
+> `^/api/v1$` and `^/api/claim-store/`; everything else falls through
+> `- { path: ^/, roles: ROLE_USER }` and 302s to `/login`. That failed in the least legible way
+> possible — Symfony's HttpClient follows redirects, so the call returned **200 with the login
+> page's HTML** and threw inside `toArray()` as a JSON parse error, which looks like mediary
+> sent garbage rather than like the client was never admitted.
+>
+> `/api/v1` is public at the firewall precisely so unauthenticated clients can reach it, with
+> each method authenticating on a token in its params. Same rows either way: mediary serves both
+> transports from one AssetProbeService.
 
 The payload includes mediary's workflow state (`marking`), variants/thumb URLs, metadata, and any
 OCR/AI context written so far.
