@@ -19,6 +19,7 @@ use Survos\DataContracts\Workflow\ContextSubjectInterface;
 use Survos\DataContracts\Workflow\ImageSubjectInterface;
 use Survos\DataContracts\Workflow\WorkflowSubjectInterface;
 use Survos\MediaBundle\Repository\MediaRepository;
+use Survos\MediaBundle\Workflow\MediaWorkflowDefinition;
 use Survos\MediaBundle\Trait\HasAiVisionTrait;
 use Survos\StateBundle\Traits\MarkingInterface;
 use Survos\StateBundle\Traits\MarkingTrait;
@@ -207,6 +208,17 @@ abstract class BaseMedia implements RouteParametersInterface, WorkflowSubjectInt
     {
         $this->id = $id;
         $this->status = 'new'; // until the AssetWorkflow Constants are shared.
+        // Seed our own initial place from our own workflow constant — the same way
+        // mediary's Asset does it. Not a literal 'new': the two happen to coincide today,
+        // but $status is MEDIARY's vocabulary reflected back and $marking is ours, and a
+        // literal here would quietly re-couple them.
+        //
+        // It has to happen at construction. InitialPlaceKickoffListener only acts on rows
+        // already sitting in the initial place, so a row persisted with marking = NULL is
+        // in no place at all: nothing kicks it off, no `next` ever fires, and it sits
+        // outside the state machine forever. That is exactly what happened to harvest's
+        // first 10 media rows -- workflow registered, subject recognised, nothing moved.
+        $this->marking = MediaWorkflowDefinition::PLACE_NEW;
 //        $this->code = $code ?? uniqid();
         $this->provider = $provider;
         $this->externalId = $externalId;
