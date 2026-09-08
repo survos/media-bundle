@@ -35,10 +35,20 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 final class MediaUpdateApplier
 {
     /**
-     * Status progression. A late-arriving earlier status must not clobber a
-     * later one — neither queues nor a re-sync promise ordering. Unknown
-     * statuses rank 0 and are always accepted, so a new mediary place cannot
-     * deadlock us.
+     * Status progression. A late-arriving earlier status must not clobber a later one — neither
+     * queues nor a re-sync promise ordering.
+     *
+     * `failed` and `deleted` are terminal and rank WITH `complete`, not below it. They were absent
+     * entirely, which made them unknown, and unknown did not behave the way the old comment here
+     * claimed ("rank 0 and are always accepted, so a new mediary place cannot deadlock us"). The
+     * code did the opposite: isForwardProgress() compared 0 >= rank(current), so `failed` arriving
+     * for an `archived` row was 0 >= 3, rejected. A client could therefore never learn that an
+     * asset had failed.
+     *
+     * That deadlocks real work. harvest's DatasetEnrichGuard treats anything outside
+     * ['complete','failed','deleted'] as still pending, so a media row frozen at `archived` stalls
+     * its whole dataset's enrich step forever. Four Walters assets and two Cleveland assets did
+     * exactly that, after mediary correctly moved them to `failed`.
      */
     private const STATUS_RANK = [
         'new' => 1,
@@ -48,6 +58,9 @@ final class MediaUpdateApplier
         'ai_ready' => 5,
         'analyzed' => 6,
         'complete' => 7,
+        // Terminal, like complete. Reaching one is progress from anywhere.
+        'failed' => 7,
+        'deleted' => 7,
     ];
 
     public function __construct(
@@ -235,6 +248,14 @@ final class MediaUpdateApplier
         if ($current === $incoming) {
             return false;
         }
-        return (self::STATUS_RANK[$incoming] ?? 0) >= (self::STATUS_RANK[$current] ?? 0);
+        // A status this client has never heard of is accepted rather than dropped: mediary may add
+        // a place before the client is updated, and refusing it would freeze the row at whatever it
+        // last understood. This is what the rank table's comment always claimed happened; it did
+        // not, because an unknown incoming ranked 0 and so lost to every known current status.
+        if (!isset(self::STATUS_RANK[$incoming])) {
+            return true;
+        }
+
+        return self::STATUS_RANK[$incoming] >= (self::STATUS_RANK[$current] ?? 0);
     }
 }
