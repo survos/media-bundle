@@ -243,6 +243,30 @@ final class MediaSyncItem
     #[Map(source: [ItemField::URL, ItemField::CITATION_URL])]
     public ?string $sourceUrl = null;
 
+    // ── OCR the producer already holds ────────────────────────────────────
+    // Set by producers that get OCR with the source rather than having to make it — an NDNP
+    // newspaper harvester has publisher ALTO for every page, produced from the scanning master and
+    // already paid for. Shipping it means mediary records it instead of re-OCRing a derivative
+    // JPEG with a general model, which is both slower and worse.
+    //
+    // Not mapped from a normalized row by name: the producer sets these explicitly, because only
+    // the producer knows the OCR's provenance.
+
+    /** Page text as the source published it. */
+    public ?string $ocrText = null;
+
+    /** One of Survos\DataContracts\Vocabulary\OcrProvider. Required whenever ocrText is set. */
+    public ?string $ocrProvider = null;
+
+    /** Specific tool/model version, when the provider has one. */
+    public ?string $ocrModel = null;
+
+    /** 0..1, when the source reports it. */
+    public ?float $ocrConfidence = null;
+
+    /** Where the OCR came from — e.g. the page's ALTO XML URL. */
+    public ?string $ocrSourceUrl = null;
+
     // ── afterMap hook ─────────────────────────────────────────────────────
 
     /**

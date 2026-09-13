@@ -75,7 +75,7 @@ final class SyncMediaCommand
         #[Option('Upload only — fire-and-forget, skip reading status back from mediary. Much faster for large initial imports.')]
         bool $uploadOnly = false,
 
-        #[Option('Dispatch each batch as an async Messenger message. Prevents timeouts on large datasets. Requires a worker.')]
+        #[Option('REMOVED — see the exception text. Accepted only so the failure explains itself.')]
         bool $async = false,
 
         #[Option('HEAD-check every source URL before dispatch and dump+stop on the first non-200 (debug aid, tracing a bad-image report back to its record). Off by default — each check is a live round trip (~1-2s), so a full run would take hours.')]
@@ -89,9 +89,23 @@ final class SyncMediaCommand
         $client = basename((string) getcwd());
         $io->note(sprintf('Client: %s', $client));
 
-        if ($async && $this->bus === null) {
-            $io->error('--async requires a Messenger bus.');
-            return Command::FAILURE;
+        // Hard fail, deliberately. --async used to fork each batch to DispatchBatchMessage so the
+        // slow HTTP call stayed off the foreground loop. That message no longer exists: the only
+        // supported caller is the dataset workflow's dispatch transition, which already runs on a
+        // consumer, so the indirection is redundant.
+        //
+        // It was kept as a silent no-op "so existing invocations don't hard-fail". That was the
+        // wrong trade. Nothing passes it, its own help text pointed at `messenger:consume media` —
+        // a transport that was never created — and 1,714 orphaned DispatchBatchMessage envelopes
+        // sat unconsumed in the catch-all `async` transport from 2026-08-18 to 2026-08-24, looking
+        // like a backlog to drain rather than dead mail. A flag that silently does nothing costs
+        // more than one that says so.
+        if ($async) {
+            throw new \InvalidArgumentException(
+                '--async was removed: DispatchBatchMessage no longer exists. media:sync is already '
+                .'driven by the dataset workflow\'s dispatch transition, which runs on a consumer '
+                .'(ds-dispatch), so batching to a second queue buys nothing. Drop the flag.'
+            );
         }
 
         // Single-URL debug mode
@@ -113,10 +127,9 @@ final class SyncMediaCommand
         $statusFilter = $all ? null : 'new';
         $totalCount   = $repo->countUrlsWithContext($statusFilter, $limit, $dataset);
 
-        $io->note(sprintf('Media to sync: %d (upload-only: %s, async: %s)',
+        $io->note(sprintf('Media to sync: %d (upload-only: %s)',
             $totalCount,
             $uploadOnly ? 'yes' : 'no',
-            $async ? 'yes — run: bin/console messenger:consume media' : 'no'
         ));
 
         if ($totalCount === 0) {
@@ -135,19 +148,19 @@ final class SyncMediaCommand
         foreach ($repo->iterateUrlsWithContext($statusFilter, $limit, $dataset) as $batchUrl => $rawData) {
             $batch[$batchUrl] = $rawData;
             if (count($batch) >= $batchSize) {
-                $total = $this->flushBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $async, $progress, $checkUrls);
+                $total = $this->flushBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $progress, $checkUrls);
                 $batch = [];
             }
         }
         if ($batch !== []) {
-            $total = $this->flushBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $async, $progress, $checkUrls);
+            $total = $this->flushBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $progress, $checkUrls);
         }
 
         $progress->finish();
         $io->newLine(2);
         $io->success(sprintf('Dispatched %d media URLs%s',
             $total,
-            $async ? ' as async messages' : ($uploadOnly ? ' (upload-only)' : '')
+            $uploadOnly ? ' (upload-only)' : ''
         ));
         return Command::SUCCESS;
     }
@@ -161,7 +174,6 @@ final class SyncMediaCommand
         SymfonyStyle $io,
         bool $sync,
         bool $uploadOnly,
-        bool $async,
         mixed $progress,
         bool $checkUrls = false,
     ): int {
@@ -197,10 +209,7 @@ final class SyncMediaCommand
             }
         }
 
-        // $async no longer forks to a message: DispatchBatchMessage is gone. It existed to keep this
-        // slow HTTP call off the foreground command loop, but the only supported caller now is the
-        // dataset workflow's dispatch transition, which already runs on a consumer. Kept as a flag
-        // rather than removed so existing invocations don't hard-fail; it is a no-op.
+        // Publishing is always inline here; the dispatch transition is itself a consumer.
         {
             try {
                 $extra = $contextMap !== [] ? ['context' => $contextMap] : [];
