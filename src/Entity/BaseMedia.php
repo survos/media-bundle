@@ -33,6 +33,7 @@ use Symfony\Component\Serializer\Attribute\Groups;
     'photo' => Photo::class,
     'video' => Video::class,
     'audio' => Audio::class,
+    'document' => Document::class,
 ])]
 #[ApiResource(
     operations: [new Get(uriTemplate: '/media/{id}'), new GetCollection(uriTemplate: '/media')],
