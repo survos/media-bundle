@@ -40,6 +40,8 @@ final class MediaSyncItem
     private const DC_PUBLISHER = 'dcterms:publisher';
     private const DC_IS_PART_OF = 'dcterms:isPartOf';
     private const DC_SOURCE = 'dcterms:source';
+    private const DC_SPATIAL = 'dcterms:spatial';
+    private const DC_ABSTRACT = 'dcterms:abstract';
 
     #[Map(source: 'tenant')]
     public ?string $tenant = null;
@@ -171,7 +173,7 @@ final class MediaSyncItem
      * Entity primarily responsible for making the object.
      * @var string[]|null
      */
-    #[Map(source: 'name_facet', searchable: true, facet: true)]
+    #[Map(source: ['name_facet', ItemField::CREATOR], searchable: true, facet: true)]
     public ?array $creator = null;
 
     /**
@@ -179,8 +181,26 @@ final class MediaSyncItem
      * Subject keywords and controlled vocabulary terms.
      * @var string[]|null
      */
-    #[Map(source: 'subject_facet', searchable: true, facet: true)]
+    #[Map(source: ['subject_facet', ItemField::SUBJECTS, ItemField::KEYWORDS], searchable: true, facet: true)]
     public ?array $subject = null;
+
+    /**
+     * dc_term: dcterms:spatial
+     * Where the photograph was taken / what place it depicts (catalog fact, not file EXIF).
+     * Rides to mediary as a source claim so AI tasks are grounded in it.
+     * @var string[]|null
+     */
+    #[Map(source: [ItemField::SUBJECTS_GEOGRAPHIC], facet: true)]
+    public ?array $place = null;
+
+    /**
+     * dc_term: dcterms:abstract
+     * The source's own caption, verbatim (e.g. a newspaper cutline) -- often the only text
+     * that says who is pictured and what is happening.
+     * @var string|null
+     */
+    #[Map(source: 'sourceCaption', searchable: true)]
+    public ?string $caption = null;
 
     /**
      * dc_term: dcterms:publisher
@@ -385,6 +405,8 @@ final class MediaSyncItem
             self::DC_PUBLISHER          => $this->institution,
             self::DC_IS_PART_OF         => $this->collection,
             self::DC_SOURCE             => $this->sourceUrl,
+            self::DC_SPATIAL            => $this->place,
+            self::DC_ABSTRACT           => $this->caption,
             // IIIF
             'iiif_base'                 => $this->iiifBase,
             'iiif_manifest'             => $this->iiifManifest,
@@ -446,6 +468,8 @@ final class MediaSyncItem
         $item->subject = $data['subject'] ?? null;
         $item->institution = $data['institution'] ?? null;
         $item->collection = $data['collection'] ?? null;
+        $item->place = $data['place'] ?? null;
+        $item->caption = $data['caption'] ?? null;
         $item->iiifBase = $data['iiifBase'] ?? $data['iiif_base'] ?? null;
         $item->iiifManifest = $data['iiifManifest'] ?? $data['iiif_manifest'] ?? null;
         $item->imageUrl = $data['imageUrl'] ?? $data['image_url'] ?? null;
@@ -480,6 +504,8 @@ final class MediaSyncItem
             'subject'       => $this->subject,
             'institution'   => $this->institution,
             'collection'    => $this->collection,
+            'place'         => $this->place,
+            'caption'       => $this->caption,
             'iiifBase'      => $this->iiifBase,
             'iiifManifest'  => $this->iiifManifest,
             'imageUrl'      => $this->imageUrl,
