@@ -254,6 +254,20 @@ bin/console media:probe "https://example.org/image.jpg"
 bin/console media:probe --url "upload://sha256/abcd..."
 ```
 
+### Recovering rows whose callback never arrived
+
+When the webhook could not be delivered at all — the laptop was off, podman was not started
+after a reboot, the tunnel moved — mediary's retries end in its failed transport and the local
+row keeps whatever status it last heard. `media:reconcile` probes those rows and applies the
+answer through the same applier the callback uses:
+
+```bash
+bin/console media:reconcile --dataset=omeka/wej --dry-run
+bin/console media:reconcile --dataset=omeka/wej
+```
+
+Recovery only, not a scheduled job. See [docs/reconcile.md](docs/reconcile.md).
+
 ---
 
 ## Publishing claims to mediary

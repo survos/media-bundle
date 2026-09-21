@@ -50,6 +50,14 @@ final class MediaUpdateApplier
      * its whole dataset's enrich step forever. Four Walters assets and two Cleveland assets did
      * exactly that, after mediary correctly moved them to `failed`.
      */
+    /**
+     * The places at the top rank: an asset that reaches one is done, one way or another.
+     *
+     * Named so callers stop re-deriving it. harvest's DatasetEnrichGuard::TERMINAL is the
+     * same list for the same reason and should point here rather than keep its own copy.
+     */
+    public const TERMINAL_STATUSES = ['complete', 'failed', 'deleted'];
+
     private const STATUS_RANK = [
         'new' => 1,
         'iiif' => 2,
@@ -212,13 +220,34 @@ final class MediaUpdateApplier
      */
     public function applyBatch(array $rows, bool $flush = true): array
     {
-        $applied = $changed = $skipped = $unmatched = 0;
+        $updates = [];
+        $skipped = 0;
         foreach ($rows as $row) {
             if (!is_array($row)) {
                 $skipped++;
                 continue;
             }
-            $fields = $this->applyUpdate(MediaUpdate::fromBatchRow($row), flush: false);
+            $updates[] = MediaUpdate::fromBatchRow($row);
+        }
+
+        return $this->applyUpdates($updates, $flush, $skipped);
+    }
+
+    /**
+     * As {@see applyBatch()}, but for callers that have already normalised their rows —
+     * `media:reconcile` reads mediary's probe shape, which is neither a batch row nor a
+     * webhook payload, and turns it into MediaUpdates with {@see MediaUpdate::fromProbeRow()}.
+     *
+     * Same counting, same single flush: a reconcile and a callback are the same write.
+     *
+     * @param list<MediaUpdate> $updates
+     * @return array{applied:int, changed:int, skipped:int, unmatched:int}
+     */
+    public function applyUpdates(array $updates, bool $flush = true, int $skipped = 0): array
+    {
+        $applied = $changed = $unmatched = 0;
+        foreach ($updates as $update) {
+            $fields = $this->applyUpdate($update, flush: false);
             if ($fields === null) {
                 $unmatched++;
                 continue;

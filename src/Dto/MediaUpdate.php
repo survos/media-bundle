@@ -90,6 +90,38 @@ final class MediaUpdate
     }
 
     /**
+     * One row of mediary's `probeAssets` response.
+     *
+     * A third spelling of the same values, and the reason this factory exists rather than
+     * the reconcile command mapping keys itself: the probe nests the storage fields under
+     * `meta` and names the state `marking`, while the batch row has them flat and calls it
+     * `status`. Normalising here keeps every producer converging on one MediaUpdate, so a
+     * reconcile applies exactly what a callback would have applied.
+     *
+     * The probe also carries `ocr`, `ai`, `children` and the promoted /info columns. Those
+     * are deliberately dropped: this DTO describes the local media row, and an app that
+     * wants the rest listens for MediaUpdatedEvent, which carries the update alongside the
+     * entity.
+     */
+    public static function fromProbeRow(array $r): self
+    {
+        $meta = is_array($r['meta'] ?? null) ? $r['meta'] : [];
+
+        return new self(
+            originalUrl: (string) ($r['source'] ?? ''),
+            status:      isset($r['marking']) ? (string) $r['marking'] : null,
+            storageKey:  isset($meta['storageKey']) ? (string) $meta['storageKey'] : null,
+            s3Url:       isset($meta['archiveUrl']) ? (string) $meta['archiveUrl'] : null,
+            smallUrl:    isset($meta['smallUrl']) ? (string) $meta['smallUrl'] : null,
+            mime:        isset($meta['mimeType']) ? (string) $meta['mimeType'] : null,
+            width:       isset($meta['width']) ? (int) $meta['width'] : null,
+            height:      isset($meta['height']) ? (int) $meta['height'] : null,
+            context:     is_array($r['context'] ?? null) ? $r['context'] : [],
+            info:        self::infoFrom($r['context']['info'] ?? null),
+        );
+    }
+
+    /**
      * One row of mediary's batch response (`{"media":[{...}]}`).
      *
      * Intentionally the SAME target shape as fromWebhook(): media:sync and the
