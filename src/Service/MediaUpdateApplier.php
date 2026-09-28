@@ -56,7 +56,8 @@ final class MediaUpdateApplier
      * Named so callers stop re-deriving it. harvest's DatasetEnrichGuard::TERMINAL is the
      * same list for the same reason and should point here rather than keep its own copy.
      */
-    public const TERMINAL_STATUSES = ['complete', 'failed', 'deleted'];
+    /** probed: a reference-only source checked in place (BatchItemDto::$archive = false); its journey ends there. */
+    public const TERMINAL_STATUSES = ['complete', 'failed', 'deleted', 'probed'];
 
     private const STATUS_RANK = [
         'new' => 1,
@@ -69,6 +70,7 @@ final class MediaUpdateApplier
         // Terminal, like complete. Reaching one is progress from anywhere.
         'failed' => 7,
         'deleted' => 7,
+        'probed' => 7,
     ];
 
     public function __construct(
