@@ -92,7 +92,6 @@ class MediaManager
             
         $existing->thumbnailUrl = $new->thumbnailUrl;
         $existing->rawData = $new->rawData;
-        $existing->updatedAt = new \DateTimeImmutable();
 
         if ($existing instanceof \Survos\MediaBundle\Entity\Video && $new instanceof \Survos\MediaBundle\Entity\Video) {
             $existing->viewCount = $new->viewCount;

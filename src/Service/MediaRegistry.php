@@ -112,7 +112,7 @@ final class MediaRegistry
         $media->rawData = array_merge($media->rawData, $item->toSourceMetaArray(), $item->toArray());
         // smallUrl is no longer computed locally — mediary owns imgproxy resizing
         // (pre-imgproxy artifact removed). Resized URLs come from mediary / on-demand.
-        $media->updatedAt = new \DateTimeImmutable();
+        // updatedAt is BaseMedia::touchUpdatedAt()'s job, and only when something changed.
 
         if ($flush) {
             $this->entityManager->flush();
@@ -134,7 +134,6 @@ final class MediaRegistry
         }
 
         $media->rawData = array_merge($media->rawData, $sourceMeta);
-        $media->updatedAt = new \DateTimeImmutable();
     }
 
     public function flush(): void

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\ExactFilter;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\QueryParameter;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\DBAL\Types\Types;
 use Survos\FieldBundle\Attribute\EntityMeta;
@@ -26,7 +28,12 @@ use Survos\StateBundle\Traits\MarkingTrait;
 use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: MediaRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 #[ORM\Table(name: 'media')]
+// For the /api/media filters and the enrich guard's readiness check. media_dataset_readiness keeps the
+// name harvest's MediaReadinessIndex listener gave it, so apps that already have it see no change.
+#[ORM\Index(name: 'media_dataset_readiness', columns: ['dataset', 'marking', 'status'])]
+#[ORM\Index(name: 'media_dataset_status', columns: ['dataset', 'status'])]
 #[ORM\InheritanceType('SINGLE_TABLE')]
 #[ORM\DiscriminatorColumn(name: 'type', type: 'string')]
 #[ORM\DiscriminatorMap([
@@ -39,6 +46,11 @@ use Symfony\Component\Serializer\Attribute\Groups;
     operations: [new Get(uriTemplate: '/media/{id}'), new GetCollection(uriTemplate: '/media')],
     normalizationContext: ['groups' => ['media:read'], 'skip_null_values' => true],
 )]
+// Exact filters so progress is one count query: /api/media?dataset=smith/saam&status=new&itemsPerPage=0
+// returns totalItems without rows. `status` is mediary's place, `marking` ours (see $marking below).
+#[QueryParameter(key: 'dataset', property: 'dataset', filter: new ExactFilter())]
+#[QueryParameter(key: 'status', property: 'status', filter: new ExactFilter())]
+#[QueryParameter(key: 'marking', property: 'marking', filter: new ExactFilter())]
 #[EntityMeta(icon: 'mdi:video-image', group: 'Media')]
 #[RouteIdentity(field: 'id')]
 abstract class BaseMedia implements RouteParametersInterface, WorkflowSubjectInterface, ImageSubjectInterface, ContextSubjectInterface, MarkingInterface
@@ -106,9 +118,21 @@ abstract class BaseMedia implements RouteParametersInterface, WorkflowSubjectInt
     #[Field(sortable: true)]
     public readonly \DateTimeImmutable $createdAt;
 
+    /**
+     * When something about this row actually changed. Set ONLY by touchUpdatedAt() below: Doctrine
+     * fires PreUpdate only for a real change set, so re-registering an unchanged row is no SQL at
+     * all. Setting it by hand on every pass made every row look dirty -- a re-normalize UPDATEd
+     * every media row of the dataset just to bump this timestamp.
+     */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     #[Groups(['media:read'])]
     public ?\DateTimeImmutable $updatedAt = null;
+
+    #[ORM\PreUpdate]
+    public function touchUpdatedAt(): void
+    {
+        $this->updatedAt = new \DateTimeImmutable();
+    }
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     #[Groups(['media:read'])]
