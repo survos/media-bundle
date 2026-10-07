@@ -162,6 +162,9 @@ final class MediaUpdateApplier
             'mimeType' => $update->effectiveMime(),
             'width'    => $update->effectiveWidth(),
             'height'   => $update->effectiveHeight(),
+            // BaseMedia has had a fileSize column all along; /info's `size` just
+            // was never mapped onto it.
+            'fileSize' => $update->effectiveFileSize(),
             // Stored whole. Faces and average colour are read off it via
             // property hooks rather than shredded into columns — they're
             // imgproxy-shaped bonus data, not a general contract.

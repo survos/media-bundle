@@ -20,6 +20,7 @@ use Survos\FieldBundle\Entity\RouteParametersInterface;
 use Survos\DataContracts\Workflow\ContextSubjectInterface;
 use Survos\DataContracts\Workflow\ImageSubjectInterface;
 use Survos\DataContracts\Workflow\WorkflowSubjectInterface;
+use Survos\ImgproxyBundle\Dto\ImgproxyInfo;
 use Survos\MediaBundle\Repository\MediaRepository;
 use Survos\MediaBundle\Workflow\MediaWorkflowDefinition;
 use Survos\MediaBundle\Trait\HasAiVisionTrait;
@@ -189,6 +190,15 @@ abstract class BaseMedia implements RouteParametersInterface, WorkflowSubjectInt
             $this->info['objects'] ?? [],
             static fn (mixed $o): bool => is_array($o) && ($o['class_name'] ?? null) === 'face',
         ));
+    }
+
+    /**
+     * ThumbHash (base64) from /info — the blurred placeholder a client paints while the
+     * real image loads. Read off the stored blob like $faces; normalised from imgproxy's hex.
+     */
+    #[Groups(['media:read'])]
+    public ?string $thumbHash {
+        get => ImgproxyInfo::thumbHashBase64($this->info['thumb_hash'] ?? null);
     }
 
     /** Average RGB of the image, from /info. Useful as a placeholder colour. */

@@ -66,6 +66,12 @@ final class MediaUpdate
         return $this->mime ?? $this->info?->mimeType;
     }
 
+    /** Bytes. mediary never sends a promoted size, so /info is the only source. */
+    public function effectiveFileSize(): ?int
+    {
+        return $this->info?->size;
+    }
+
     /**
      * mediary's `asset.analyzed` payload. Unknown keys are ignored on purpose:
      * this is a pub/sub contract, and a subscriber must not break when the
