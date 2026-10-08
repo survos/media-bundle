@@ -13,8 +13,8 @@ final class ImageTaggingService
     private Client $client;
 
     public function __construct(
-        #[Autowire('%env(OPENAI_API_KEY)%')]
-        private readonly string $openaiApiKey,
+        #[Autowire('%env(default::OPENAI_API_KEY)%')]
+        private readonly ?string $openaiApiKey,
         private readonly LoggerInterface $logger,
     ) {
         // @todo: check that this class exists
@@ -22,7 +22,7 @@ final class ImageTaggingService
             $this->logger->critical("You must enable the OpenAI extension to use OpenAI.  composer req openai-php/client");
             return;
         }
-        $this->client = OpenAI::client($this->openaiApiKey);
+        $this->client = OpenAI::client($this->openaiApiKey ?? '');
     }
 
     /**
