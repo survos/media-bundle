@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Service;
@@ -74,9 +75,9 @@ final class MediaUpdateApplier
     ];
 
     public function __construct(
-        private readonly EntityManagerInterface   $em,
+        private readonly EntityManagerInterface $em,
         private readonly EventDispatcherInterface $dispatcher,
-        private readonly LoggerInterface          $logger,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -88,7 +89,7 @@ final class MediaUpdateApplier
      */
     private function repository(): MediaRepository
     {
-        /** @var MediaRepository */
+        /* @var MediaRepository */
         return $this->em->getRepository(BaseMedia::class);
     }
 
@@ -118,8 +119,9 @@ final class MediaUpdateApplier
      */
     private function applyUpdate(MediaUpdate $update, bool $flush = true): ?array
     {
-        if ($update->originalUrl === '') {
+        if ('' === $update->originalUrl) {
             $this->logger->warning('media update: no originalUrl, dropping');
+
             return null;
         }
 
@@ -135,6 +137,7 @@ final class MediaUpdateApplier
                 'key' => $key,
                 'url' => $update->originalUrl,
             ]);
+
             return null;
         }
 
@@ -155,22 +158,22 @@ final class MediaUpdateApplier
         foreach ([
             'storageKey' => $update->storageKey
                 ?? MediaUpdate::storageKeyFromArchiveUrl($update->s3Url),
-            's3Url'    => $update->s3Url,
+            's3Url' => $update->s3Url,
             'smallUrl' => $update->smallUrl,
             // effective* fall back to /info, which covers far more assets than
             // mediary's promoted columns do.
             'mimeType' => $update->effectiveMime(),
-            'width'    => $update->effectiveWidth(),
-            'height'   => $update->effectiveHeight(),
+            'width' => $update->effectiveWidth(),
+            'height' => $update->effectiveHeight(),
             // BaseMedia has had a fileSize column all along; /info's `size` just
             // was never mapped onto it.
             'fileSize' => $update->effectiveFileSize(),
             // Stored whole. Faces and average colour are read off it via
             // property hooks rather than shredded into columns — they're
             // imgproxy-shaped bonus data, not a general contract.
-            'info'     => $update->info?->raw,
+            'info' => $update->info?->raw,
         ] as $field => $value) {
-            if ($value === null || !property_exists($media, $field)) {
+            if (null === $value || !property_exists($media, $field)) {
                 continue;
             }
             if ($media->$field !== $value) {
@@ -179,12 +182,12 @@ final class MediaUpdateApplier
             }
         }
 
-        if ($update->status !== null && $this->isForwardProgress($media->status ?? null, $update->status)) {
+        if (null !== $update->status && $this->isForwardProgress($media->status ?? null, $update->status)) {
             $media->status = $update->status;
             $changed[] = 'status';
         }
 
-        if ($changed === []) {
+        if ([] === $changed) {
             return [];
         }
 
@@ -229,7 +232,7 @@ final class MediaUpdateApplier
         $skipped = 0;
         foreach ($rows as $row) {
             if (!is_array($row)) {
-                $skipped++;
+                ++$skipped;
                 continue;
             }
             $updates[] = MediaUpdate::fromBatchRow($row);
@@ -246,6 +249,7 @@ final class MediaUpdateApplier
      * Same counting, same single flush: a reconcile and a callback are the same write.
      *
      * @param list<MediaUpdate> $updates
+     *
      * @return array{applied:int, changed:int, skipped:int, unmatched:int}
      */
     public function applyUpdates(array $updates, bool $flush = true, int $skipped = 0): array
@@ -253,13 +257,13 @@ final class MediaUpdateApplier
         $applied = $changed = $unmatched = 0;
         foreach ($updates as $update) {
             $fields = $this->applyUpdate($update, flush: false);
-            if ($fields === null) {
-                $unmatched++;
+            if (null === $fields) {
+                ++$unmatched;
                 continue;
             }
-            $applied++;
-            if ($fields !== []) {
-                $changed++;
+            ++$applied;
+            if ([] !== $fields) {
+                ++$changed;
             }
         }
         if ($flush) {
@@ -276,7 +280,7 @@ final class MediaUpdateApplier
 
     private function isForwardProgress(?string $current, string $incoming): bool
     {
-        if ($current === null) {
+        if (null === $current) {
             return true;
         }
         if ($current === $incoming) {

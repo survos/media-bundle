@@ -27,7 +27,6 @@ use Symfony\AI\Platform\Contract\JsonSchema\Attribute\Schema;
  * Usage:
  *   $item = $dtoMapper->mapRecord($normalizedRow, MediaSyncItem::class);
  *   if ($item->isPermitted()) { ... }
- *
  */
 final class MediaSyncItem
 {
@@ -59,7 +58,6 @@ final class MediaSyncItem
      * Derived from iiif_base + '/full/max/0/default.jpg' when available,
      * falling back to thumbnail_url.
      * Not mapped directly — set by afterMap().
-     * @var string|null
      */
     public ?string $url = null;
 
@@ -78,7 +76,6 @@ final class MediaSyncItem
      * dc_term: dcterms:accessRights
      * Reuse permission granted by the holding institution.
      * Controls whether this item is eligible for mediary storage.
-     * @var string|null
      */
     #[Map(source: 'reuse_allowed', facet: true)]
     #[Schema(enum: ['no restrictions', 'creative commons', 'contact host', 'all rights reserved'])]
@@ -87,7 +84,6 @@ final class MediaSyncItem
     /**
      * dc_term: dcterms:rights
      * Human-readable rights statement from the source record.
-     * @var string|null
      */
     #[Map(source: 'rights')]
     public ?string $rights = null;
@@ -95,7 +91,6 @@ final class MediaSyncItem
     /**
      * dc_term: dcterms:license
      * Machine-readable license URI.
-     * @var string|null
      */
     #[Map(source: 'license')]
     public ?string $licenseUri = null;
@@ -105,16 +100,14 @@ final class MediaSyncItem
     /**
      * Short ARK identifier from the source system.
      * For DC: "tb09jw368" (from "commonwealth:tb09jw368").
-     * dc_term: dcterms:identifier
-     * @var string|null
+     * dc_term: dcterms:identifier.
      */
     #[Map(source: 'ark_id')]
     public ?string $sourceArk = null;
 
     /**
      * Full source system ID including institution prefix.
-     * Example: "commonwealth:tb09jw368"
-     * @var string|null
+     * Example: "commonwealth:tb09jw368".
      */
     #[Map(source: 'id')]
     public ?string $sourceId = null;
@@ -122,7 +115,6 @@ final class MediaSyncItem
     /**
      * Aggregator / provider code: dc | euro | pp | mds | smith
      * Not in the normalized row — set externally before dispatch.
-     * @var string|null
      */
     #[Schema(enum: ['dc', 'euro', 'pp', 'mds', 'smith'])]
     public ?string $aggregator = null;
@@ -132,7 +124,6 @@ final class MediaSyncItem
     /**
      * dc_term: dcterms:title
      * Primary title of the object.
-     * @var string|null
      */
     #[Map(source: 'title', searchable: true)]
     public ?string $title = null;
@@ -140,7 +131,6 @@ final class MediaSyncItem
     /**
      * dc_term: dcterms:description
      * Abstract or descriptive note about the object.
-     * @var string|null
      */
     #[Map(source: 'description', searchable: true)]
     public ?string $description = null;
@@ -151,6 +141,7 @@ final class MediaSyncItem
      * Source may be an array — first element is taken in afterMap().
      * Declared as mixed so DtoMapper doesn't coerce the array to a string
      * before afterMap() can extract the first element.
+     *
      * @var string|null
      */
     #[Map(source: 'date', sortable: true)]
@@ -162,6 +153,7 @@ final class MediaSyncItem
      * Source field: type_of_resource (array — first element taken).
      * Declared as mixed so DtoMapper doesn't coerce the array to a string
      * before afterMap() can normalize it.
+     *
      * @var string|null
      */
     #[Map(source: 'type_of_resource')]
@@ -171,6 +163,7 @@ final class MediaSyncItem
     /**
      * dc_term: dcterms:creator
      * Entity primarily responsible for making the object.
+     *
      * @var string[]|null
      */
     #[Map(source: ['name_facet', ItemField::CREATOR], searchable: true, facet: true)]
@@ -179,6 +172,7 @@ final class MediaSyncItem
     /**
      * dc_term: dcterms:subject
      * Subject keywords and controlled vocabulary terms.
+     *
      * @var string[]|null
      */
     #[Map(source: ['subject_facet', ItemField::SUBJECTS, ItemField::KEYWORDS], searchable: true, facet: true)]
@@ -188,6 +182,7 @@ final class MediaSyncItem
      * dc_term: dcterms:spatial
      * Where the photograph was taken / what place it depicts (catalog fact, not file EXIF).
      * Rides to mediary as a source claim so AI tasks are grounded in it.
+     *
      * @var string[]|null
      */
     #[Map(source: [ItemField::SUBJECTS_GEOGRAPHIC], facet: true)]
@@ -197,7 +192,6 @@ final class MediaSyncItem
      * dc_term: dcterms:abstract
      * The source's own caption, verbatim (e.g. a newspaper cutline) -- often the only text
      * that says who is pictured and what is happening.
-     * @var string|null
      */
     #[Map(source: 'sourceCaption', searchable: true)]
     public ?string $caption = null;
@@ -205,7 +199,6 @@ final class MediaSyncItem
     /**
      * dc_term: dcterms:publisher
      * Holding institution name.
-     * @var string|null
      */
     #[Map(source: 'institution', facet: true)]
     public ?string $institution = null;
@@ -213,6 +206,7 @@ final class MediaSyncItem
     /**
      * dc_term: dcterms:isPartOf
      * Collection name(s) the object belongs to.
+     *
      * @var string[]|null
      */
     #[Map(source: 'collections', facet: true)]
@@ -223,29 +217,25 @@ final class MediaSyncItem
     /**
      * IIIF Image API base URL (everything before /full/…).
      * Example: https://iiif.digitalcommonwealth.org/iiif/2/commonwealth%3Atb09jw37j
-     * The image URL is derived from this by appending /full/max/0/default.jpg
-     * @var string|null
+     * The image URL is derived from this by appending /full/max/0/default.jpg.
      */
     #[Map(source: 'iiif_base')]
     public ?string $iiifBase = null;
 
     /**
      * IIIF Presentation API manifest URL.
-     * @var string|null
      */
     #[Map(source: 'iiif_manifest')]
     public ?string $iiifManifest = null;
 
     /**
      * Original source image URL. This is the preferred basis for mediary caching.
-     * @var string|null
      */
     #[Map(source: 'image_url')]
     public ?string $imageUrl = null;
 
     /**
      * Pre-built thumbnail URL (display only, not used as mediary identity).
-     * @var string|null
      */
     #[Map(source: 'thumbnail_url')]
     public ?string $thumbnailUrl = null;
@@ -258,7 +248,6 @@ final class MediaSyncItem
      * it ItemField::CITATION_URL instead — DtoMapper matches source keys exactly (no
      * snake/camel normalization), so both must be listed or one provider family
      * silently loses this field.
-     * @var string|null
      */
     #[Map(source: [ItemField::URL, ItemField::CITATION_URL])]
     public ?string $sourceUrl = null;
@@ -295,10 +284,10 @@ final class MediaSyncItem
      */
     public function afterMap(array &$mapped, array $original): void
     {
-        if ($this->code === null) {
+        if (null === $this->code) {
             $this->code = $original['code'] ?? $original['id'] ?? null;
         }
-        if ($this->code !== null && $this->code !== '') {
+        if (null !== $this->code && '' !== $this->code) {
             $this->code = (string) $this->code;
             $mapped['code'] = $this->code;
         }
@@ -308,10 +297,10 @@ final class MediaSyncItem
         // direct image URLs (Fortepan .jpg, Smithsonian IDS deliveryService?id=…)
         // pass through unchanged, so mediary receives a valid image rather than a 404.
         $derived = match (true) {
-            $this->iiifBase     !== null => IiifUrl::imageUrl($this->iiifBase),
-            $this->imageUrl     !== null => $this->imageUrl,
-            $this->thumbnailUrl !== null => $this->thumbnailUrl,
-            default                      => null,
+            null !== $this->iiifBase => IiifUrl::imageUrl($this->iiifBase),
+            null !== $this->imageUrl => $this->imageUrl,
+            null !== $this->thumbnailUrl => $this->thumbnailUrl,
+            default => null,
         };
 
         // afterMap OWNS this property. The docblock has always said "not mapped
@@ -331,9 +320,9 @@ final class MediaSyncItem
         // the dangerous one: a perfectly valid https URL that passes every scheme
         // check and would be archived as the master image, except it is an HTML
         // landing page. Nothing downstream would ever have told us.
-        if ($derived !== null) {
+        if (null !== $derived) {
             $this->url = $derived;
-        } elseif ($this->url !== null) {
+        } elseif (null !== $this->url) {
             $this->urlProblem = sprintf(
                 'no image source (iiif_base/image_url/thumbnail_url); row["url"]=%s is a record address, not an image',
                 var_export($this->url, true),
@@ -368,7 +357,7 @@ final class MediaSyncItem
      */
     public function isPermitted(): bool
     {
-        return $this->reuseAllowed === null
+        return null === $this->reuseAllowed
             || in_array($this->reuseAllowed, ['no restrictions', 'creative commons'], true);
     }
 
@@ -385,34 +374,34 @@ final class MediaSyncItem
     {
         return array_filter([
             // Rights (promoted to real columns on Asset, also in context for completeness)
-            'reuse_allowed'             => $this->reuseAllowed,
-            'rights'                    => $this->rights,
-            'license_uri'               => $this->licenseUri,
+            'reuse_allowed' => $this->reuseAllowed,
+            'rights' => $this->rights,
+            'license_uri' => $this->licenseUri,
             // Identity
-            'source_ark'                => $this->sourceArk,
-            'source_id'                 => $this->sourceId,
-            'tenant'                    => $this->tenant,
-            'dataset_key'               => $this->datasetKey,
-            'code'                      => $this->code,
-            'aggregator'                => $this->aggregator,
+            'source_ark' => $this->sourceArk,
+            'source_id' => $this->sourceId,
+            'tenant' => $this->tenant,
+            'dataset_key' => $this->datasetKey,
+            'code' => $this->code,
+            'aggregator' => $this->aggregator,
             // DC fields — dcterms: keyed so context blob is queryable by RDF term
-            self::DC_TITLE              => $this->title,
-            self::DC_DESCRIPTION        => $this->description,
-            self::DC_DATE               => $this->date,
-            self::DC_TYPE               => $this->type,
-            self::DC_CREATOR            => $this->creator,
-            self::DC_SUBJECT            => $this->subject,
-            self::DC_PUBLISHER          => $this->institution,
-            self::DC_IS_PART_OF         => $this->collection,
-            self::DC_SOURCE             => $this->sourceUrl,
-            self::DC_SPATIAL            => $this->place,
-            self::DC_ABSTRACT           => $this->caption,
+            self::DC_TITLE => $this->title,
+            self::DC_DESCRIPTION => $this->description,
+            self::DC_DATE => $this->date,
+            self::DC_TYPE => $this->type,
+            self::DC_CREATOR => $this->creator,
+            self::DC_SUBJECT => $this->subject,
+            self::DC_PUBLISHER => $this->institution,
+            self::DC_IS_PART_OF => $this->collection,
+            self::DC_SOURCE => $this->sourceUrl,
+            self::DC_SPATIAL => $this->place,
+            self::DC_ABSTRACT => $this->caption,
             // IIIF
-            'iiif_base'                 => $this->iiifBase,
-            'iiif_manifest'             => $this->iiifManifest,
-            'image_url'                 => $this->imageUrl,
-            'thumbnail_url'             => $this->thumbnailUrl,
-        ], static fn($v) => $v !== null && $v !== [] && $v !== '');
+            'iiif_base' => $this->iiifBase,
+            'iiif_manifest' => $this->iiifManifest,
+            'image_url' => $this->imageUrl,
+            'thumbnail_url' => $this->thumbnailUrl,
+        ], static fn ($v) => null !== $v && [] !== $v && '' !== $v);
     }
 
     /**
@@ -432,7 +421,7 @@ final class MediaSyncItem
                 continue;
             }
             foreach (is_array($value) ? $value : [$value] as $one) {
-                if ($one === null || $one === '' || is_array($one)) {
+                if (null === $one || '' === $one || is_array($one)) {
                     continue;
                 }
                 $claims[] = new ClaimDTO(predicate: $predicate, value: $one);
@@ -475,6 +464,7 @@ final class MediaSyncItem
         $item->imageUrl = $data['imageUrl'] ?? $data['image_url'] ?? null;
         $item->thumbnailUrl = $data['thumbnailUrl'] ?? $data['thumbnail_url'] ?? null;
         $item->sourceUrl = $data['sourceUrl'] ?? $data['source_url'] ?? null;
+
         return $item;
     }
 
@@ -486,32 +476,32 @@ final class MediaSyncItem
     public function toArray(): array
     {
         return array_filter([
-            'tenant'         => $this->tenant,
-            'datasetKey'     => $this->datasetKey,
-            'code'           => $this->code,
-            'url'            => $this->url,
-            'reuseAllowed'   => $this->reuseAllowed,
-            'rights'        => $this->rights,
-            'licenseUri'     => $this->licenseUri,
-            'sourceArk'      => $this->sourceArk,
-            'sourceId'       => $this->sourceId,
-            'aggregator'     => $this->aggregator,
-            'title'         => $this->title,
-            'description'   => $this->description,
-            'date'          => $this->date,
-            'type'          => $this->type,
-            'creator'       => $this->creator,
-            'subject'       => $this->subject,
-            'institution'   => $this->institution,
-            'collection'    => $this->collection,
-            'place'         => $this->place,
-            'caption'       => $this->caption,
-            'iiifBase'      => $this->iiifBase,
-            'iiifManifest'  => $this->iiifManifest,
-            'imageUrl'      => $this->imageUrl,
-            'thumbnailUrl'  => $this->thumbnailUrl,
-            'sourceUrl'     => $this->sourceUrl,
-        ], static fn($v) => $v !== null && $v !== [] && $v !== '');
+            'tenant' => $this->tenant,
+            'datasetKey' => $this->datasetKey,
+            'code' => $this->code,
+            'url' => $this->url,
+            'reuseAllowed' => $this->reuseAllowed,
+            'rights' => $this->rights,
+            'licenseUri' => $this->licenseUri,
+            'sourceArk' => $this->sourceArk,
+            'sourceId' => $this->sourceId,
+            'aggregator' => $this->aggregator,
+            'title' => $this->title,
+            'description' => $this->description,
+            'date' => $this->date,
+            'type' => $this->type,
+            'creator' => $this->creator,
+            'subject' => $this->subject,
+            'institution' => $this->institution,
+            'collection' => $this->collection,
+            'place' => $this->place,
+            'caption' => $this->caption,
+            'iiifBase' => $this->iiifBase,
+            'iiifManifest' => $this->iiifManifest,
+            'imageUrl' => $this->imageUrl,
+            'thumbnailUrl' => $this->thumbnailUrl,
+            'sourceUrl' => $this->sourceUrl,
+        ], static fn ($v) => null !== $v && [] !== $v && '' !== $v);
     }
 
     /**
@@ -542,15 +532,15 @@ final class MediaSyncItem
 
     public function preferredUrl(): ?string
     {
-        if ($this->url !== null && $this->url !== '') {
+        if (null !== $this->url && '' !== $this->url) {
             return $this->url;
         }
 
-        if ($this->iiifBase !== null && $this->iiifBase !== '') {
+        if (null !== $this->iiifBase && '' !== $this->iiifBase) {
             return IiifUrl::imageUrl($this->iiifBase);
         }
 
-        if ($this->thumbnailUrl !== null && $this->thumbnailUrl !== '') {
+        if (null !== $this->thumbnailUrl && '' !== $this->thumbnailUrl) {
             return $this->thumbnailUrl;
         }
 
@@ -567,16 +557,16 @@ final class MediaSyncItem
     {
         return match (strtolower(trim($raw))) {
             'still image', 'stillimage', 'image' => 'StillImage',
-            'text'                               => 'Text',
-            'physical object', 'physicalobject'  => 'PhysicalObject',
-            'sound'                              => 'Sound',
-            'moving image', 'movingimage'        => 'MovingImage',
-            'dataset'                            => 'Dataset',
-            'collection'                         => 'Collection',
-            'software'                           => 'Software',
-            'event'                              => 'Event',
-            'service'                            => 'Service',
-            default                              => $raw,
+            'text' => 'Text',
+            'physical object', 'physicalobject' => 'PhysicalObject',
+            'sound' => 'Sound',
+            'moving image', 'movingimage' => 'MovingImage',
+            'dataset' => 'Dataset',
+            'collection' => 'Collection',
+            'software' => 'Software',
+            'event' => 'Event',
+            'service' => 'Service',
+            default => $raw,
         };
     }
 }

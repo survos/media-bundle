@@ -28,7 +28,7 @@ final class MediaMenuSubscriber extends AbstractAdminMenuSubscriber
         return [
             'Photos' => Photo::class,
             'Videos' => Video::class,
-            'Audio'  => Audio::class,
+            'Audio' => Audio::class,
         ];
     }
 

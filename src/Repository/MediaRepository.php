@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Repository;
@@ -9,7 +10,6 @@ use Survos\MediaBundle\Entity\BaseMedia;
 
 final class MediaRepository extends EntityRepository
 {
-
     public function findByCode(string $code): ?BaseMedia
     {
         return $this->findOneBy(['code' => $code]);
@@ -20,7 +20,7 @@ final class MediaRepository extends EntityRepository
      */
     public function findByCodes(array $codes): array
     {
-        if ($codes === []) {
+        if ([] === $codes) {
             return [];
         }
 
@@ -36,12 +36,12 @@ final class MediaRepository extends EntityRepository
         $qb = $this->createQueryBuilder('m')
             ->select('m.externalUrl');
 
-        if ($status !== null) {
+        if (null !== $status) {
             $qb->andWhere('m.status = :status')
                ->setParameter('status', $status);
         }
 
-        if ($limit !== null) {
+        if (null !== $limit) {
             $qb->setMaxResults($limit);
         }
 
@@ -58,23 +58,24 @@ final class MediaRepository extends EntityRepository
         $qb = $this->createQueryBuilder('m')
             ->select('COUNT(m.externalUrl)');
 
-        if ($status !== null) {
+        if (null !== $status) {
             $qb->andWhere('m.status = :status')
                ->setParameter('status', $status);
         }
 
-        if ($dataset !== null) {
+        if (null !== $dataset) {
             $qb->andWhere('m.dataset = :dataset')
                ->setParameter('dataset', $dataset);
         }
 
         $count = (int) $qb->getQuery()->getSingleScalarResult();
 
-        return $limit !== null ? min($count, $limit) : $count;
+        return null !== $limit ? min($count, $limit) : $count;
     }
 
     /**
      * Iterate [url => rawData] pairs for building context maps on dispatch.
+     *
      * @return iterable<string, array>
      */
     public function iterateUrlsWithContext(?string $status = null, ?int $limit = null, ?string $dataset = null): iterable
@@ -82,17 +83,17 @@ final class MediaRepository extends EntityRepository
         $qb = $this->createQueryBuilder('m')
             ->select('m.externalUrl', 'm.rawData', 'm.aiQueue');
 
-        if ($status !== null) {
+        if (null !== $status) {
             $qb->andWhere('m.status = :status')
                ->setParameter('status', $status);
         }
 
-        if ($dataset !== null) {
+        if (null !== $dataset) {
             $qb->andWhere('m.dataset = :dataset')
                ->setParameter('dataset', $dataset);
         }
 
-        if ($limit !== null) {
+        if (null !== $limit) {
             $qb->setMaxResults($limit);
         }
 

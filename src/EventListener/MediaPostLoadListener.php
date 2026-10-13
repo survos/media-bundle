@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Survos\MediaBundle\EventListener;
 
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
@@ -13,9 +15,8 @@ use Survos\MediaBundle\Traits\HasMediaTrait;
 final class MediaPostLoadListener
 {
     public function __construct(
-//        private readonly ?MediaRepository $mediaRepository=null
+        //        private readonly ?MediaRepository $mediaRepository=null
     ) {
-
     }
 
     public function postLoad(PostLoadEventArgs $args): void
@@ -61,6 +62,7 @@ final class MediaPostLoadListener
     private function usesHasMediaTrait($entity): bool
     {
         $traits = class_uses($entity::class);
+
         return in_array(HasMediaTrait::class, $traits);
     }
 }

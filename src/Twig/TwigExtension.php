@@ -1,18 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Survos\MediaBundle\Twig;
 
 use Survos\DataContracts\Vocabulary\MediaPreset;
-
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
 
-use Survos\MediaBundle\Service\MediaUrlGenerator;
-
 class TwigExtension extends AbstractExtension
 {
-    public function __construct() {
+    public function __construct()
+    {
     }
 
     public function getFilters(): array
@@ -20,18 +20,18 @@ class TwigExtension extends AbstractExtension
         return [
             // If your filter generates SAFE HTML, add ['is_safe' => ['html']]
             // Reference: https://twig.symfony.com/doc/3.x/advanced.html#automatic-escaping
-            new TwigFilter('filter_name', fn(string $s) => '@todo: filter ' . $s),
+            new TwigFilter('filter_name', fn (string $s) => '@todo: filter '.$s),
         ];
     }
 
     public function getFunctions(): array
     {
         return [
-            new TwigFunction('media_presets', fn() => MediaPreset::PRESETS),
-            new TwigFunction('media_preset', fn(string $name) => MediaPreset::PRESETS[$name] ?? null),
-            new TwigFunction('media_preset_small', fn() => MediaPreset::SMALL),
-            new TwigFunction('media_preset_medium', fn() => MediaPreset::MEDIUM),
-            new TwigFunction('media_preset_large', fn() => MediaPreset::LARGE),
+            new TwigFunction('media_presets', fn () => MediaPreset::PRESETS),
+            new TwigFunction('media_preset', fn (string $name) => MediaPreset::PRESETS[$name] ?? null),
+            new TwigFunction('media_preset_small', fn () => MediaPreset::SMALL),
+            new TwigFunction('media_preset_medium', fn () => MediaPreset::MEDIUM),
+            new TwigFunction('media_preset_large', fn () => MediaPreset::LARGE),
         ];
     }
 }

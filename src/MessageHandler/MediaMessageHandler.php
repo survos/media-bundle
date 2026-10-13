@@ -1,39 +1,42 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Survos\MediaBundle\MessageHandler;
 
-use Survos\MediaBundle\Message\SyncProviderMessage;
+use Psr\Log\LoggerInterface;
 use Survos\MediaBundle\Message\FetchMediaMessage;
+use Survos\MediaBundle\Message\SyncProviderMessage;
 use Survos\MediaBundle\Service\MediaManager;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Psr\Log\LoggerInterface;
 
 #[AsMessageHandler]
 class MediaMessageHandler
 {
     public function __construct(
         private readonly MediaManager $mediaManager,
-        private readonly LoggerInterface $logger
-    ) {}
+        private readonly LoggerInterface $logger,
+    ) {
+    }
 
     public function handleSyncProvider(SyncProviderMessage $message): void
     {
         $this->logger->info('Starting media sync', [
             'provider' => $message->providerName,
-            'options' => $message->options
+            'options' => $message->options,
         ]);
 
         try {
             $synced = $this->mediaManager->syncProvider($message->providerName, $message->options);
-            
+
             $this->logger->info('Media sync completed', [
                 'provider' => $message->providerName,
-                'count' => count($synced)
+                'count' => count($synced),
             ]);
         } catch (\Exception $e) {
             $this->logger->error('Media sync failed', [
                 'provider' => $message->providerName,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
             throw $e;
         }
@@ -48,7 +51,7 @@ class MediaMessageHandler
 
         $this->logger->info('Fetching single media item', [
             'provider' => $message->providerName,
-            'external_id' => $message->externalId
+            'external_id' => $message->externalId,
         ]);
 
         try {
@@ -57,19 +60,19 @@ class MediaMessageHandler
                 $this->logger->info('Media fetched successfully', [
                     'provider' => $message->providerName,
                     'external_id' => $message->externalId,
-                    'title' => $media->getTitle()
+                    'title' => $media->getTitle(),
                 ]);
             } else {
                 $this->logger->warning('Media not found', [
                     'provider' => $message->providerName,
-                    'external_id' => $message->externalId
+                    'external_id' => $message->externalId,
                 ]);
             }
         } catch (\Exception $e) {
             $this->logger->error('Failed to fetch media', [
                 'provider' => $message->providerName,
                 'external_id' => $message->externalId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
             throw $e;
         }

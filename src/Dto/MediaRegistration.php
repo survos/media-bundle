@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Dto;
@@ -22,8 +23,8 @@ final class MediaRegistration
             $row['mediaKey'],
             $row['status'],
             $row['storageKey'],
-            $row['s3Url']?:null,
-            $row['smallUrl']?:null,
+            $row['s3Url'] ?: null,
+            $row['smallUrl'] ?: null,
         );
     }
 }

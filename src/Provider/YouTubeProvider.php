@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Survos\MediaBundle\Provider;
 
 use Survos\MediaBundle\Entity\BaseMedia;
@@ -10,7 +12,7 @@ class YouTubeProvider extends AbstractProvider
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        array $config = []
+        array $config = [],
     ) {
         parent::__construct($config);
     }
@@ -22,7 +24,7 @@ class YouTubeProvider extends AbstractProvider
 
     public function supports(string $type): bool
     {
-        return $type === 'video';
+        return 'video' === $type;
     }
 
     public function fetchAll(array $options = []): iterable
@@ -74,14 +76,14 @@ class YouTubeProvider extends AbstractProvider
     {
         $id = $rawData['id']['videoId'] ?? $rawData['id'];
         $snippet = $rawData['snippet'];
-        
+
         /** @var Video $video */
         $video = $this->createMedia('video', $id);
-        
+
         $video
             ->setTitle($snippet['title'])
             ->setDescription($snippet['description']);
-        
+
         $video->thumbnailUrl = $snippet['thumbnails']['high']['url'] ?? $snippet['thumbnails']['default']['url'];
         $video->externalUrl = "https://www.youtube.com/watch?v={$id}";
         $video->rawData = $rawData;

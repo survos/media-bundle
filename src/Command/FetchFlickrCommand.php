@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Survos\MediaBundle\Command;
 
 use Survos\MediaBundle\Service\MediaManager;
@@ -23,6 +25,7 @@ final class FetchFlickrCommand
     ): int {
         if (!$userId) {
             $io->error('User ID is required. Use --user-id=USER_ID');
+
             return Command::FAILURE;
         }
 
@@ -30,22 +33,23 @@ final class FetchFlickrCommand
 
         try {
             $synced = $this->mediaManager->syncProvider('flickr', ['userId' => $userId]);
-            $io->success("Successfully fetched " . count($synced) . " photos from Flickr");
+            $io->success('Successfully fetched '.count($synced).' photos from Flickr');
 
             $io->table(
                 ['Code', 'Title', 'Published'],
-                array_map(fn($photo) => [
+                array_map(fn ($photo) => [
                     $photo->code,
-                    substr($photo->getTitle() ?? 'Untitled', 0, 50) . '...',
+                    substr($photo->getTitle() ?? 'Untitled', 0, 50).'...',
                     $photo->publishedAt?->format('Y-m-d H:i'),
                 ], array_slice($synced, 0, 10))
             );
 
             if (count($synced) > 10) {
-                $io->note('Showing first 10 results. Total: ' . count($synced));
+                $io->note('Showing first 10 results. Total: '.count($synced));
             }
         } catch (\Exception $e) {
-            $io->error("Failed to fetch Flickr photos: " . $e->getMessage());
+            $io->error('Failed to fetch Flickr photos: '.$e->getMessage());
+
             return Command::FAILURE;
         }
 

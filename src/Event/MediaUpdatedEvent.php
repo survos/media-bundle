@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Event;
@@ -25,10 +26,10 @@ use Symfony\Contracts\EventDispatcher\Event;
 final class MediaUpdatedEvent extends Event
 {
     public function __construct(
-        public readonly BaseMedia   $media,
+        public readonly BaseMedia $media,
         public readonly MediaUpdate $update,
         /** Fields that actually changed, so listeners can skip no-op deliveries. */
-        public readonly array       $changed = [],
+        public readonly array $changed = [],
     ) {
     }
 
@@ -39,6 +40,7 @@ final class MediaUpdatedEvent extends Event
                 return true;
             }
         }
+
         return false;
     }
 }

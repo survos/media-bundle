@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Survos\MediaBundle\Traits;
 
 use Doctrine\Common\Collections\Collection;
@@ -27,12 +29,14 @@ trait HasMediaTrait
         if (!in_array($code, $this->imageCodes)) {
             $this->imageCodes[] = $code;
         }
+
         return $this;
     }
 
     public function removeImageCode(string $code): static
     {
-        $this->imageCodes = array_values(array_filter($this->imageCodes, fn($c) => $c !== $code));
+        $this->imageCodes = array_values(array_filter($this->imageCodes, fn ($c) => $c !== $code));
+
         return $this;
     }
 
@@ -41,12 +45,14 @@ trait HasMediaTrait
         if (!in_array($code, $this->videoCodes)) {
             $this->videoCodes[] = $code;
         }
+
         return $this;
     }
 
     public function removeVideoCode(string $code): static
     {
-        $this->videoCodes = array_values(array_filter($this->videoCodes, fn($c) => $c !== $code));
+        $this->videoCodes = array_values(array_filter($this->videoCodes, fn ($c) => $c !== $code));
+
         return $this;
     }
 }

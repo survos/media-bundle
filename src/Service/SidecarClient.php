@@ -42,13 +42,13 @@ final class SidecarClient
      */
     public function isAvailable(): bool
     {
-        return $this->mediaServerBaseUrl !== '';
+        return '' !== $this->mediaServerBaseUrl;
     }
 
     /** Storage key for the sidecar: <prefix>/a/bb/<id>.<task>.json — computed locally, no request. */
     public function path(string $id, string $task): string
     {
-        return MediaKeyService::archivePathFromKey($id, $task . '.json', $this->prefix);
+        return MediaKeyService::archivePathFromKey($id, $task.'.json', $this->prefix);
     }
 
     public function exists(string $id, string $task): bool
@@ -80,7 +80,7 @@ final class SidecarClient
     {
         if (!$force) {
             $cached = $this->read($id, $task);
-            if ($cached !== null) {
+            if (null !== $cached) {
                 return $cached;
             }
         }
@@ -93,6 +93,7 @@ final class SidecarClient
 
     /**
      * @param array<string, mixed> $params
+     *
      * @return array<string, mixed>
      */
     private function rpc(string $method, array $params): array
@@ -115,7 +116,7 @@ final class SidecarClient
 
         $response = $this->httpClient->request(
             'POST',
-            rtrim($this->mediaServerBaseUrl, '/') . '/api/v1',
+            rtrim($this->mediaServerBaseUrl, '/').'/api/v1',
             $options,
         );
 

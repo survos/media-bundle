@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Twig;
@@ -19,7 +20,7 @@ final class MediaExtension extends AbstractExtension
     {
         $globals = [];
         foreach ($this->presets as $name => $_) {
-            $globals['PRESET_' . strtoupper($name)] = $name;
+            $globals['PRESET_'.strtoupper($name)] = $name;
         }
 
         return $globals;
@@ -35,7 +36,7 @@ final class MediaExtension extends AbstractExtension
     public function mediaResize(
         string|object $media,
         string $preset,
-        ?string $client=null
+        ?string $client = null,
     ): string {
         return $this->urlGenerator->resize($media, $preset, client: $client);
     }

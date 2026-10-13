@@ -1,9 +1,9 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Service;
 
-use OpenAI;
 use OpenAI\Client;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -19,16 +19,17 @@ final class ImageTaggingService
     ) {
         // @todo: check that this class exists
         if (!class_exists(Client::class)) {
-            $this->logger->critical("You must enable the OpenAI extension to use OpenAI.  composer req openai-php/client");
+            $this->logger->critical('You must enable the OpenAI extension to use OpenAI.  composer req openai-php/client');
+
             return;
         }
-        $this->client = OpenAI::client($this->openaiApiKey ?? '');
+        $this->client = \OpenAI::client($this->openaiApiKey ?? '');
     }
 
     /**
      * Tag a single image by URL (http/https or data: URI).
      *
-     * @param string $url      Image URL (http, https, or data:)
+     * @param string $url Image URL (http, https, or data:)
      * @param array{
      *   detail?: 'low'|'high',
      *   lang?: string|null,
@@ -52,15 +53,15 @@ final class ImageTaggingService
      */
     public function tagImageUrl(string $url, array $ctx = []): array
     {
-        $detail      = $ctx['detail'] ?? 'low';
-        $lang        = $ctx['lang'] ?? 'en';
-        $year        = $ctx['year'] ?? null;
-        $location    = $ctx['location'] ?? null;
-        $known       = $ctx['knownTagsCsv'] ?? null;
-        $hint        = $ctx['hint'] ?? null;
-        $model       = $ctx['model'] ?? 'gpt-4o-mini';
+        $detail = $ctx['detail'] ?? 'low';
+        $lang = $ctx['lang'] ?? 'en';
+        $year = $ctx['year'] ?? null;
+        $location = $ctx['location'] ?? null;
+        $known = $ctx['knownTagsCsv'] ?? null;
+        $hint = $ctx['hint'] ?? null;
+        $model = $ctx['model'] ?? 'gpt-4o-mini';
         $temperature = $ctx['temperature'] ?? 0.2;
-        $maxTokens   = $ctx['maxTokens'] ?? 400;
+        $maxTokens = $ctx['maxTokens'] ?? 400;
 
         if (!\in_array($detail, ['low', 'high'], true)) {
             throw new \InvalidArgumentException('detail must be "low" or "high".');
@@ -85,7 +86,7 @@ final class ImageTaggingService
                         ['type' => 'image_url', 'image_url' => ['url' => $url, 'detail' => $detail]],
                     ],
                 ]],
-                'max_tokens'  => $maxTokens,
+                'max_tokens' => $maxTokens,
                 'temperature' => $temperature,
             ]);
 
@@ -97,27 +98,27 @@ final class ImageTaggingService
             }
 
             $result = [
-                'tags'        => array_values(array_unique(array_map('strval', $parsed['tags'] ?? []))),
-                'safety'      => (string)($parsed['safety'] ?? 'unknown'),
-                'description' => (string)($parsed['description'] ?? ''),
+                'tags' => array_values(array_unique(array_map('strval', $parsed['tags'] ?? []))),
+                'safety' => (string) ($parsed['safety'] ?? 'unknown'),
+                'description' => (string) ($parsed['description'] ?? ''),
                 'time_period' => $parsed['time_period'] ?? null,
-                'confidence'  => (string)($parsed['confidence'] ?? 'low'),
+                'confidence' => (string) ($parsed['confidence'] ?? 'low'),
             ];
 
             // Optional usage stats (if present in SDK)
             $usage = $response->usage ?? null;
             if ($usage) {
                 $result['_usage'] = [
-                    'input_tokens'  => $usage->promptTokens ?? null,
+                    'input_tokens' => $usage->promptTokens ?? null,
                     'output_tokens' => $usage->completionTokens ?? null,
-                    'total_tokens'  => $usage->totalTokens ?? null,
+                    'total_tokens' => $usage->totalTokens ?? null,
                 ];
             }
 
             return $result;
         } catch (\Throwable $e) {
             $this->logger->error('Image tagging failed', [
-                'url'   => $url,
+                'url' => $url,
                 'error' => $e->getMessage(),
             ]);
             throw $e;
@@ -136,13 +137,13 @@ final class ImageTaggingService
     ): string {
         $lines = [];
 
-        $lines[] = trim("
+        $lines[] = trim('
 You are an expert visual archivist. Analyze the image and output ONLY valid JSON with this schema:
 
 {
-  \"tags\": [\"tag1\", \"tag2\", \"tag3\"],          // 8–20 concise, lower-case, deduped
-  \"safety\": \"safe|questionable|unsafe\",          // conservative if nudity/violence/etc.
-  \"description\": \"One sentence in " . ($lang ?: 'en') . "\",
+  "tags": ["tag1", "tag2", "tag3"],          // 8–20 concise, lower-case, deduped
+  "safety": "safe|questionable|unsafe",          // conservative if nudity/violence/etc.
+  "description": "One sentence in '.($lang ?: 'en')."\",
   \"time_period\": \"YYYY or '1930s' or null\",
   \"confidence\": \"high|medium|low\"
 }
@@ -155,15 +156,21 @@ Rules:
         ");
 
         $ctx = [];
-        if ($year)     { $ctx[] = "Year (approx): {$year}"; }
-        if ($location) { $ctx[] = "Location (approx): {$location}"; }
+        if ($year) {
+            $ctx[] = "Year (approx): {$year}";
+        }
+        if ($location) {
+            $ctx[] = "Location (approx): {$location}";
+        }
         if ($knownTagsCsv) {
             $ctx[] = "Existing human tags (refine, dedupe, and extend): {$knownTagsCsv}";
         }
-        if ($hint)     { $ctx[] = "Additional context: {$hint}"; }
+        if ($hint) {
+            $ctx[] = "Additional context: {$hint}";
+        }
 
         if ($ctx) {
-            $lines[] = "Context:\n- " . implode("\n- ", $ctx);
+            $lines[] = "Context:\n- ".implode("\n- ", $ctx);
         }
 
         return implode("\n\n", $lines);
@@ -175,28 +182,33 @@ Rules:
     private function extractJson(string $content): ?array
     {
         $start = strpos($content, '{');
-        if ($start === false) {
+        if (false === $start) {
             return null;
         }
         $depth = 0;
         $len = strlen($content);
-        for ($i = $start; $i < $len; $i++) {
+        for ($i = $start; $i < $len; ++$i) {
             $ch = $content[$i];
-            if ($ch === '{') $depth++;
-            if ($ch === '}') $depth--;
-            if ($depth === 0) {
+            if ('{' === $ch) {
+                ++$depth;
+            }
+            if ('}' === $ch) {
+                --$depth;
+            }
+            if (0 === $depth) {
                 $json = substr($content, $start, $i - $start + 1);
                 $decoded = json_decode($json, true);
                 if (\is_array($decoded)) {
                     return $decoded;
                 }
                 $next = strpos($content, '{', $i + 1);
-                if ($next === false) {
+                if (false === $next) {
                     return null;
                 }
                 $i = $next - 1; // continue from next brace
             }
         }
+
         return null;
     }
 }

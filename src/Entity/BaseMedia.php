@@ -10,20 +10,20 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\QueryParameter;
-use Doctrine\ORM\Mapping as ORM;
 use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\Mapping as ORM;
+use Survos\DataContracts\Workflow\ContextSubjectInterface;
+use Survos\DataContracts\Workflow\ImageSubjectInterface;
+use Survos\DataContracts\Workflow\WorkflowSubjectInterface;
 use Survos\FieldBundle\Attribute\EntityMeta;
 use Survos\FieldBundle\Attribute\Field;
 use Survos\FieldBundle\Attribute\RouteIdentity;
 use Survos\FieldBundle\Entity\RouteIdentityTrait;
 use Survos\FieldBundle\Entity\RouteParametersInterface;
-use Survos\DataContracts\Workflow\ContextSubjectInterface;
-use Survos\DataContracts\Workflow\ImageSubjectInterface;
-use Survos\DataContracts\Workflow\WorkflowSubjectInterface;
 use Survos\ImgproxyBundle\Dto\ImgproxyInfo;
 use Survos\MediaBundle\Repository\MediaRepository;
-use Survos\MediaBundle\Workflow\MediaWorkflowDefinition;
 use Survos\MediaBundle\Trait\HasAiVisionTrait;
+use Survos\MediaBundle\Workflow\MediaWorkflowDefinition;
 use Survos\StateBundle\Traits\MarkingInterface;
 use Survos\StateBundle\Traits\MarkingTrait;
 use Symfony\Component\Serializer\Attribute\Groups;
@@ -254,7 +254,7 @@ abstract class BaseMedia implements RouteParametersInterface, WorkflowSubjectInt
         // outside the state machine forever. That is exactly what happened to harvest's
         // first 10 media rows -- workflow registered, subject recognised, nothing moved.
         $this->marking = MediaWorkflowDefinition::PLACE_NEW;
-//        $this->code = $code ?? uniqid();
+        //        $this->code = $code ?? uniqid();
         $this->provider = $provider;
         $this->externalId = $externalId;
         $this->createdAt = new \DateTimeImmutable();

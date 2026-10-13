@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Survos\MediaBundle\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,7 +21,7 @@ class MediaManager
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly CacheInterface $cache,
-        private readonly int $cacheTtl = 3600
+        private readonly int $cacheTtl = 3600,
     ) {
         $repo = $this->em->getRepository(BaseMedia::class);
         if (!$repo instanceof MediaRepository) {
@@ -51,10 +53,10 @@ class MediaManager
         }
 
         $cacheKey = sprintf('media_sync_%s_%s', $providerName, md5(serialize($options)));
-        
+
         return $this->cache->get($cacheKey, function (ItemInterface $item) use ($provider, $options) {
             $item->expiresAfter($this->cacheTtl);
-            
+
             $synced = [];
             $batchSize = 20;
             $i = 0;
@@ -62,7 +64,7 @@ class MediaManager
             foreach ($provider->fetchAll($options) as $media) {
                 $existingMedia = $this->mediaRepository->findOneBy([
                     'provider' => $provider->getName(),
-                    'externalId' => $media->externalId
+                    'externalId' => $media->externalId,
                 ]);
 
                 if ($existingMedia) {
@@ -73,13 +75,14 @@ class MediaManager
                     $synced[] = $media;
                 }
 
-                if (++$i % $batchSize === 0) {
+                if (0 === ++$i % $batchSize) {
                     $this->em->flush();
                     $this->em->clear();
                 }
             }
 
             $this->em->flush();
+
             return $synced;
         });
     }
@@ -89,7 +92,7 @@ class MediaManager
         $existing
             ->setTitle($new->getTitle())
             ->setDescription($new->getDescription());
-            
+
         $existing->thumbnailUrl = $new->thumbnailUrl;
         $existing->rawData = $new->rawData;
 

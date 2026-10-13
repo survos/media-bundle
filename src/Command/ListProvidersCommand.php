@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Survos\MediaBundle\Command;
 
 use Survos\MediaBundle\Service\MediaManager;
@@ -21,6 +23,7 @@ final class ListProvidersCommand
 
         if (empty($providers)) {
             $io->warning('No providers configured');
+
             return Command::SUCCESS;
         }
 

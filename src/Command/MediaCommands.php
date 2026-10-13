@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Command;
@@ -28,6 +29,7 @@ final class MediaCommands
     ): int {
         if (!$force) {
             $io->error('media:reset requires --force to confirm truncation of the media table.');
+
             return Command::FAILURE;
         }
 
@@ -86,18 +88,18 @@ final class MediaCommands
             $io->writeln(sprintf('Missing externalUrl: %d', $missingExternal));
         }
 
-        if ($statusRows !== []) {
+        if ([] !== $statusRows) {
             $io->section('By status');
             $io->table(['Status', 'Count'], array_map(
-                static fn(array $row): array => [$row['status'], (int) $row['count']],
+                static fn (array $row): array => [$row['status'], (int) $row['count']],
                 $statusRows
             ));
         }
 
-        if ($typeRows !== []) {
+        if ([] !== $typeRows) {
             $io->section('By type');
             $io->table(['Type', 'Count'], array_map(
-                static fn(array $row): array => [$row['type'], (int) $row['count']],
+                static fn (array $row): array => [$row['type'], (int) $row['count']],
                 $typeRows
             ));
         }

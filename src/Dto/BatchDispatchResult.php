@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Dto;
@@ -40,8 +41,8 @@ final class BatchDispatchResult
             if (!is_array($row)) {
                 continue;
             }
-            $self->rows[]   = $row;
-            $self->media[]  = MediaRegistration::fromArray($row);
+            $self->rows[] = $row;
+            $self->media[] = MediaRegistration::fromArray($row);
         }
         $self->rejected = array_values(array_filter(
             (array) ($data['rejected'] ?? []),

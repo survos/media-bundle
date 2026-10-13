@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Command;
 
-use Survos\MediaBundle\Service\MediaBatchDispatcher;
 use Survos\DataContracts\Util\MediaIdentity;
+use Survos\MediaBundle\Service\MediaBatchDispatcher;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;
@@ -25,7 +25,7 @@ final class ProbeMediaCommand
         #[Argument('Asset id (16 hex chars) or original URL')] string $source,
         #[Option('Force treat source as URL')] bool $url = false,
     ): int {
-        $isId    = (bool) preg_match('/^[a-f0-9]{16}$/i', $source);
+        $isId = (bool) preg_match('/^[a-f0-9]{16}$/i', $source);
         $assetId = ($url || !$isId)
             ? MediaIdentity::idFromOriginalUrl($source)
             : strtolower($source);
@@ -38,16 +38,19 @@ final class ProbeMediaCommand
             $probe = $this->dispatcher->probe($assetId);
         } catch (\Throwable $e) {
             $io->error($e->getMessage());
+
             return Command::FAILURE;
         }
 
         $json = json_encode($probe->raw, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        if ($json === false) {
+        if (false === $json) {
             $io->error('Failed to encode probe payload as JSON.');
+
             return Command::FAILURE;
         }
 
         $io->writeln($json);
+
         return Command::SUCCESS;
     }
 }

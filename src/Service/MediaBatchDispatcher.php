@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Service;
@@ -9,7 +10,6 @@ use Survos\MediaBundle\Dto\ImportEnrichmentContext;
 use Survos\MediaBundle\Dto\MediaProbeResult;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use RuntimeException;
 
 final class MediaBatchDispatcher
 {
@@ -72,35 +72,37 @@ final class MediaBatchDispatcher
      * should publish selected source/AI/human claims alongside media as a
      * separate projection once the claims publishing contract is wired.
      *
-     * @param ImportEnrichmentContext[] $enrichments  keyed by image URL (or imageUrlForAi())
+     * @param ImportEnrichmentContext[] $enrichments keyed by image URL (or imageUrlForAi())
      */
     public function dispatchEnrichments(string $client, array $enrichments, array $extra = []): BatchDispatchResult
     {
-        $urls       = [];
+        $urls = [];
         $contextMap = [];
 
         foreach ($enrichments as $url => $enrichment) {
             $imageUrl = is_string($url) ? $url : $enrichment->imageUrlForAi();
-            if (!$imageUrl) continue;
+            if (!$imageUrl) {
+                continue;
+            }
 
             $urls[] = $imageUrl;
-            $meta   = $enrichment->toValueMap();
+            $meta = $enrichment->toValueMap();
 
             // Also include non-DC fields mediary needs to direct AI pipeline
             if ($enrichment->contentType) {
-                $meta['content_type']     = $enrichment->contentType;
+                $meta['content_type'] = $enrichment->contentType;
             }
             if ($enrichment->aggregator) {
-                $meta['aggregator']       = $enrichment->aggregator;
+                $meta['aggregator'] = $enrichment->aggregator;
             }
             if ($enrichment->iiifBase) {
-                $meta['iiif_base']        = $enrichment->iiifBase;
+                $meta['iiif_base'] = $enrichment->iiifBase;
             }
             if ($enrichment->thumbUrl) {
-                $meta['thumbnail_url']    = $enrichment->thumbUrl;
+                $meta['thumbnail_url'] = $enrichment->thumbUrl;
             }
             if ($enrichment->id) {
-                $meta['source_id']        = $enrichment->id;
+                $meta['source_id'] = $enrichment->id;
             }
 
             $contextMap[$imageUrl] = $meta;
@@ -126,7 +128,7 @@ final class MediaBatchDispatcher
                     unset($extra['context'][$contextUrl][MediaSyncKeys::SOURCE_CLAIMS]);
                 }
             }
-            if ($sourceClaims !== []) {
+            if ([] !== $sourceClaims) {
                 $extra[MediaSyncKeys::SOURCE_CLAIMS] = $sourceClaims;
             }
         }
@@ -134,7 +136,7 @@ final class MediaBatchDispatcher
         // Tell mediary where to publish completion. Caller-supplied wins, so a
         // one-off sync can redirect callbacks (e.g. at a tunnel) without
         // changing config.
-        if ($this->callbackUrl !== null && $this->callbackUrl !== '' && !isset($extra['callback_url'])) {
+        if (null !== $this->callbackUrl && '' !== $this->callbackUrl && !isset($extra['callback_url'])) {
             $extra['callback_url'] = $this->callbackUrl;
         }
 
@@ -143,8 +145,8 @@ final class MediaBatchDispatcher
         // may run its own AI, but those results should also become claims.
         $options = [
             'json' => array_merge([
-                'client'   => $client,
-                'urls'     => $urls,
+                'client' => $client,
+                'urls' => $urls,
                 'dispatch' => true,
             ], $extra),
         ];
@@ -166,7 +168,7 @@ final class MediaBatchDispatcher
             ? self::SYNC_TIMEOUT
             : min(self::BATCH_TIMEOUT_CAP, self::BATCH_TIMEOUT_BASE + count($urls) * self::BATCH_TIMEOUT_PER_URL);
 
-        $options['timeout']      = $timeout;
+        $options['timeout'] = $timeout;
         $options['max_duration'] = $timeout;
 
         $response = $this->httpClient->request(
@@ -176,8 +178,8 @@ final class MediaBatchDispatcher
         );
 
         $status = $response->getStatusCode();
-        if ($status !== 200) {
-            throw new RuntimeException($url . "\n" . 'Media server batch call failed. ' . $status);
+        if (200 !== $status) {
+            throw new \RuntimeException($url."\n".'Media server batch call failed. '.$status);
         }
 
         return BatchDispatchResult::fromArray($response->toArray());
@@ -191,8 +193,8 @@ final class MediaBatchDispatcher
         $rows = $this->probeAssets([$assetId]);
         $row = $rows[0] ?? null;
 
-        if ($row === null) {
-            throw new RuntimeException(sprintf('Media server has no asset %s.', $assetId));
+        if (null === $row) {
+            throw new \RuntimeException(sprintf('Media server has no asset %s.', $assetId));
         }
 
         return MediaProbeResult::fromArray($row);
@@ -202,6 +204,7 @@ final class MediaBatchDispatcher
      * Probe multiple registered media items by ids.
      *
      * @param list<string> $assetIds
+     *
      * @return list<MediaProbeResult>
      */
     public function probeMany(array $assetIds): array
@@ -224,12 +227,13 @@ final class MediaBatchDispatcher
      * same AssetProbeService the REST routes used, so the rows are identical by construction.
      *
      * @param list<string> $assetIds
+     *
      * @return list<array<string,mixed>>
      */
     private function probeAssets(array $assetIds): array
     {
-        $ids = array_values(array_filter($assetIds, static fn (string $id): bool => $id !== ''));
-        if ($ids === []) {
+        $ids = array_values(array_filter($assetIds, static fn (string $id): bool => '' !== $id));
+        if ([] === $ids) {
             return [];
         }
 
@@ -251,13 +255,13 @@ final class MediaBatchDispatcher
 
         $response = $this->httpClient->request(
             'POST',
-            rtrim($this->mediaServerBaseUrl, '/') . '/api/v1',
+            rtrim($this->mediaServerBaseUrl, '/').'/api/v1',
             $options,
         );
 
         $status = $response->getStatusCode();
-        if ($status !== 200) {
-            throw new RuntimeException(sprintf('Media server probe failed (%d).', $status));
+        if (200 !== $status) {
+            throw new \RuntimeException(sprintf('Media server probe failed (%d).', $status));
         }
 
         /** @var array<string,mixed> $body */
@@ -266,11 +270,7 @@ final class MediaBatchDispatcher
         // A JSON-RPC error is a 200 with an `error` member, so checking the status alone would
         // read a failure as an empty result.
         if (isset($body['error'])) {
-            throw new RuntimeException(sprintf(
-                'Media server probe failed: %s (%s).',
-                (string) ($body['error']['message'] ?? 'unknown error'),
-                (string) ($body['error']['code'] ?? '-'),
-            ));
+            throw new \RuntimeException(sprintf('Media server probe failed: %s (%s).', (string) ($body['error']['message'] ?? 'unknown error'), (string) ($body['error']['code'] ?? '-')));
         }
 
         /** @var list<array<string,mixed>> $assets */

@@ -35,7 +35,8 @@ final class OcrService
         private readonly LoggerInterface $logger,
         #[Autowire('%env(default::AI_TOOLS_HOST)%')] private readonly ?string $aiToolsHost = null,
         private readonly int $httpTimeoutSeconds = 120,
-    ) {}
+    ) {
+    }
 
     /**
      * Run ai-tools analysis with OCR. Exactly one of $filename, $url, $localFile must be set.
@@ -56,25 +57,25 @@ final class OcrService
         $start = microtime(true);
 
         $host = rtrim((string) $this->aiToolsHost, '/');
-        if ($host === '') {
+        if ('' === $host) {
             return $this->failure('AI_TOOLS_HOST not configured', $start);
         }
 
-        $provided = array_filter([$filename, $url, $localFile], static fn($v) => $v !== null && $v !== '');
-        if (count($provided) !== 1) {
+        $provided = array_filter([$filename, $url, $localFile], static fn ($v) => null !== $v && '' !== $v);
+        if (1 !== count($provided)) {
             return $this->failure('pass exactly one of filename, url, localFile', $start);
         }
 
         try {
-            if ($localFile !== null) {
+            if (null !== $localFile) {
                 $response = $this->postUpload($host, $localFile, $lang);
             } else {
                 $response = $this->postJson($host, [
-                    'filename'         => $filename,
-                    'url'              => $url,
+                    'filename' => $filename,
+                    'url' => $url,
                     'include_ocr_text' => true,
-                    'run_ocr'          => true,
-                    'lang'             => $lang,
+                    'run_ocr' => true,
+                    'lang' => $lang,
                 ]);
             }
 
@@ -89,19 +90,20 @@ final class OcrService
                 $text = null;
             } else {
                 $text = trim($text);
-                if ($text === '') {
+                if ('' === $text) {
                     $text = null;
                 }
             }
 
             return [
-                'text'       => $text,
-                'analysis'   => $body,
+                'text' => $text,
+                'analysis' => $body,
                 'durationMs' => $this->elapsed($start),
-                'error'      => null,
+                'error' => null,
             ];
         } catch (\Throwable $e) {
             $this->logger->warning('OcrService: {err}', ['err' => $e->getMessage()]);
+
             return $this->failure($e->getMessage(), $start);
         }
     }
@@ -109,8 +111,8 @@ final class OcrService
     /** @param array<string,mixed> $payload */
     private function postJson(string $host, array $payload): object
     {
-        return $this->httpClient->request('POST', $host . '/analyze/type', [
-            'json'    => array_filter($payload, static fn($v) => $v !== null && $v !== ''),
+        return $this->httpClient->request('POST', $host.'/analyze/type', [
+            'json' => array_filter($payload, static fn ($v) => null !== $v && '' !== $v),
             'timeout' => $this->httpTimeoutSeconds,
         ]);
     }
@@ -118,22 +120,22 @@ final class OcrService
     private function postUpload(string $host, string $localFile, string $lang): object
     {
         if (!is_file($localFile) || !is_readable($localFile)) {
-            throw new \RuntimeException('file not readable: ' . basename($localFile));
+            throw new \RuntimeException('file not readable: '.basename($localFile));
         }
 
         // DataPart::fromPath lazily opens the file and keeps it readable for
         // the whole request lifecycle — we don't manage the handle ourselves
         // so Symfony HttpClient's rewind-on-retry works.
         $form = new FormDataPart([
-            'file'             => DataPart::fromPath($localFile),
+            'file' => DataPart::fromPath($localFile),
             'include_ocr_text' => '1',
-            'run_ocr'          => '1',
-            'lang'             => $lang,
+            'run_ocr' => '1',
+            'lang' => $lang,
         ]);
 
-        return $this->httpClient->request('POST', $host . '/analyze/upload', [
+        return $this->httpClient->request('POST', $host.'/analyze/upload', [
             'headers' => $form->getPreparedHeaders()->toArray(),
-            'body'    => $form->bodyToIterable(),
+            'body' => $form->bodyToIterable(),
             'timeout' => $this->httpTimeoutSeconds,
         ]);
     }
@@ -142,10 +144,10 @@ final class OcrService
     private function failure(string $reason, float $start): array
     {
         return [
-            'text'       => null,
-            'analysis'   => [],
+            'text' => null,
+            'analysis' => [],
             'durationMs' => $this->elapsed($start),
-            'error'      => $reason,
+            'error' => $reason,
         ];
     }
 

@@ -52,11 +52,11 @@ class SurvosMediaBundle extends AbstractSurvosBundle
                         ->end()
                     ->end()
                     ->defaultValue([
-                        'small'  => ['resize' => 'fill', 'width' => 192, 'height' => 192],
+                        'small' => ['resize' => 'fill', 'width' => 192, 'height' => 192],
                         'medium' => ['resize' => 'fit',  'width' => 400, 'height' => 400],
-                        'large'  => ['resize' => 'fit',  'width' => 800, 'height' => 800],
-                        'ai'     => ['resize' => 'fit',  'width' => 512, 'height' => 512],
-                        'thumb'  => ['resize' => 'fit',  'width' => 300, 'height' => 300],
+                        'large' => ['resize' => 'fit',  'width' => 800, 'height' => 800],
+                        'ai' => ['resize' => 'fit',  'width' => 512, 'height' => 512],
+                        'thumb' => ['resize' => 'fit',  'width' => 300, 'height' => 300],
                     ])
                 ->end()
                 ->arrayNode('providers')

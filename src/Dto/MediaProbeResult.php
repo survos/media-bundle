@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Dto;
@@ -6,14 +7,12 @@ namespace Survos\MediaBundle\Dto;
 final class MediaProbeResult
 {
     /**
-     * @param array<string,string> $thumbs
+     * @param array<string,string>      $thumbs
      * @param list<array<string,mixed>> $variants
-     * @param array<string,mixed>|null $context
-     * @param array<string,mixed> $meta
+     * @param array<string,mixed>|null  $context
+     * @param array<string,mixed>       $meta
      * @param list<array<string,mixed>> $children
-     * @param mixed $ocr
-     * @param mixed $ai
-     * @param array<string,mixed> $raw
+     * @param array<string,mixed>       $raw
      */
     public function __construct(
         public readonly string $id,
@@ -52,6 +51,6 @@ final class MediaProbeResult
 
     public function isComplete(): bool
     {
-        return $this->marking === 'complete';
+        return 'complete' === $this->marking;
     }
 }

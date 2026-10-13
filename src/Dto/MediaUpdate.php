@@ -1,11 +1,12 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Dto;
 
-use Survos\ImgproxyBundle\Dto\ImgproxyInfo;
-use Survos\DataContracts\Util\MediaKeyService;
 use Survos\DataContracts\Util\MediaIdentity;
+use Survos\DataContracts\Util\MediaKeyService;
+use Survos\ImgproxyBundle\Dto\ImgproxyInfo;
 
 /**
  * One "something about this image changed" notification from mediary.
@@ -18,16 +19,16 @@ use Survos\DataContracts\Util\MediaIdentity;
 final class MediaUpdate
 {
     public function __construct(
-        public readonly string  $originalUrl,
+        public readonly string $originalUrl,
         public readonly ?string $status = null,
         public readonly ?string $storageKey = null,
         public readonly ?string $s3Url = null,
         public readonly ?string $smallUrl = null,
         public readonly ?string $mime = null,
-        public readonly ?int    $width = null,
-        public readonly ?int    $height = null,
+        public readonly ?int $width = null,
+        public readonly ?int $height = null,
         /** @var array<string,mixed> ocr/sha256 — the non-/info remainder */
-        public readonly array   $context = [],
+        public readonly array $context = [],
         /**
          * imgproxy Pro's /info response, typed.
          *
@@ -81,17 +82,17 @@ final class MediaUpdate
     {
         return new self(
             originalUrl: (string) ($p['originalUrl'] ?? ''),
-            status:      isset($p['marking']) ? (string) $p['marking'] : null,
+            status: isset($p['marking']) ? (string) $p['marking'] : null,
             // mediary doesn't currently send storageKey (only archiveUrl) — see
             // mediaKeyFromArchiveUrl(). Prefer the explicit field when it appears.
-            storageKey:  isset($p['storageKey']) ? (string) $p['storageKey'] : null,
-            s3Url:       isset($p['archiveUrl']) ? (string) $p['archiveUrl'] : null,
-            smallUrl:    isset($p['smallUrl']) ? (string) $p['smallUrl'] : null,
-            mime:        isset($p['mime']) ? (string) $p['mime'] : null,
-            width:       isset($p['width']) ? (int) $p['width'] : null,
-            height:      isset($p['height']) ? (int) $p['height'] : null,
-            context:     is_array($p['context'] ?? null) ? $p['context'] : [],
-            info:        self::infoFrom($p['context']['info'] ?? $p['info'] ?? null),
+            storageKey: isset($p['storageKey']) ? (string) $p['storageKey'] : null,
+            s3Url: isset($p['archiveUrl']) ? (string) $p['archiveUrl'] : null,
+            smallUrl: isset($p['smallUrl']) ? (string) $p['smallUrl'] : null,
+            mime: isset($p['mime']) ? (string) $p['mime'] : null,
+            width: isset($p['width']) ? (int) $p['width'] : null,
+            height: isset($p['height']) ? (int) $p['height'] : null,
+            context: is_array($p['context'] ?? null) ? $p['context'] : [],
+            info: self::infoFrom($p['context']['info'] ?? $p['info'] ?? null),
         );
     }
 
@@ -115,15 +116,15 @@ final class MediaUpdate
 
         return new self(
             originalUrl: (string) ($r['source'] ?? ''),
-            status:      isset($r['marking']) ? (string) $r['marking'] : null,
-            storageKey:  isset($meta['storageKey']) ? (string) $meta['storageKey'] : null,
-            s3Url:       isset($meta['archiveUrl']) ? (string) $meta['archiveUrl'] : null,
-            smallUrl:    isset($meta['smallUrl']) ? (string) $meta['smallUrl'] : null,
-            mime:        isset($meta['mimeType']) ? (string) $meta['mimeType'] : null,
-            width:       isset($meta['width']) ? (int) $meta['width'] : null,
-            height:      isset($meta['height']) ? (int) $meta['height'] : null,
-            context:     is_array($r['context'] ?? null) ? $r['context'] : [],
-            info:        self::infoFrom($r['context']['info'] ?? null),
+            status: isset($r['marking']) ? (string) $r['marking'] : null,
+            storageKey: isset($meta['storageKey']) ? (string) $meta['storageKey'] : null,
+            s3Url: isset($meta['archiveUrl']) ? (string) $meta['archiveUrl'] : null,
+            smallUrl: isset($meta['smallUrl']) ? (string) $meta['smallUrl'] : null,
+            mime: isset($meta['mimeType']) ? (string) $meta['mimeType'] : null,
+            width: isset($meta['width']) ? (int) $meta['width'] : null,
+            height: isset($meta['height']) ? (int) $meta['height'] : null,
+            context: is_array($r['context'] ?? null) ? $r['context'] : [],
+            info: self::infoFrom($r['context']['info'] ?? null),
         );
     }
 
@@ -142,25 +143,25 @@ final class MediaUpdate
     {
         return new self(
             originalUrl: (string) ($r['originalUrl'] ?? ''),
-            status:      isset($r['status']) ? (string) $r['status'] : null,
-            storageKey:  isset($r['storageKey']) ? (string) $r['storageKey'] : null,
-            s3Url:       isset($r['s3Url']) ? (string) $r['s3Url'] : null,
-            smallUrl:    isset($r['smallUrl']) ? (string) $r['smallUrl'] : null,
+            status: isset($r['status']) ? (string) $r['status'] : null,
+            storageKey: isset($r['storageKey']) ? (string) $r['storageKey'] : null,
+            s3Url: isset($r['s3Url']) ? (string) $r['s3Url'] : null,
+            smallUrl: isset($r['smallUrl']) ? (string) $r['smallUrl'] : null,
             // mediary does not yet return these on the batch endpoint — only on
             // the asset.analyzed webhook. Until it does, media:sync leaves
             // dimensions null rather than inventing them.
-            mime:        isset($r['mime']) ? (string) $r['mime'] : null,
-            width:       isset($r['width']) ? (int) $r['width'] : null,
-            height:      isset($r['height']) ? (int) $r['height'] : null,
-            context:     is_array($r['context'] ?? null) ? $r['context'] : [],
-            info:        self::infoFrom($r['context']['info'] ?? $r['info'] ?? null),
+            mime: isset($r['mime']) ? (string) $r['mime'] : null,
+            width: isset($r['width']) ? (int) $r['width'] : null,
+            height: isset($r['height']) ? (int) $r['height'] : null,
+            context: is_array($r['context'] ?? null) ? $r['context'] : [],
+            info: self::infoFrom($r['context']['info'] ?? $r['info'] ?? null),
         );
     }
 
     /** mediary nests the blob under context.info; tolerate a top-level one too. */
     private static function infoFrom(mixed $raw): ?ImgproxyInfo
     {
-        return is_array($raw) && $raw !== [] ? ImgproxyInfo::fromArray($raw) : null;
+        return is_array($raw) && [] !== $raw ? ImgproxyInfo::fromArray($raw) : null;
     }
 
     /**
@@ -206,7 +207,7 @@ final class MediaUpdate
     public function storageKeyProblem(): ?string
     {
         $key = $this->storageKey ?? self::storageKeyFromArchiveUrl($this->s3Url);
-        if ($key === null || $key === '') {
+        if (null === $key || '' === $key) {
             return null; // nothing archived yet — not a problem, just not ready
         }
 
@@ -220,8 +221,9 @@ final class MediaUpdate
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
 
         // TARGET scheme — reversible, so assert the whole path, not just a shard.
-        if ($parts[0] !== 'orig' && $ext !== '') {
+        if ('orig' !== $parts[0] && '' !== $ext) {
             $expected = MediaKeyService::archivePathFromUrl($this->originalUrl, $ext, $parts[0]);
+
             return $key === $expected
                 ? null
                 : sprintf('key "%s" != derived "%s"', $key, $expected);
@@ -229,7 +231,7 @@ final class MediaUpdate
 
         // LEGACY scheme — content hash is one-way; check the shard invariant only.
         [, $aa, $bb] = $parts;
-        if (!str_starts_with($name, $aa . $bb)) {
+        if (!str_starts_with($name, $aa.$bb)) {
             return sprintf('legacy shard "%s/%s" does not match hash "%s"', $aa, $bb, substr($name, 0, 8));
         }
 
@@ -240,17 +242,18 @@ final class MediaUpdate
     public function isLegacyStorageKey(): bool
     {
         $key = $this->storageKey ?? self::storageKeyFromArchiveUrl($this->s3Url);
-        return $key !== null && str_starts_with($key, 'orig/');
+
+        return null !== $key && str_starts_with($key, 'orig/');
     }
 
     /** Recover the object key from a public archive URL, when only that is sent. */
     public static function storageKeyFromArchiveUrl(?string $url): ?string
     {
-        if ($url === null || $url === '') {
+        if (null === $url || '' === $url) {
             return null;
         }
         $path = ltrim((string) parse_url($url, PHP_URL_PATH), '/');
-        if ($path === '') {
+        if ('' === $path) {
             return null;
         }
         // Virtual-hosted style puts the bucket in the host, so the path IS the key.
@@ -267,7 +270,7 @@ final class MediaUpdate
         // Strip a leading segment only when what remains is unmistakably an archive key
         // (`orig/…` legacy or `o/…` reversible). Anything else is left alone rather than
         // guessed at: for a field that is immutable once set, a wrong value is worse than none.
-        if (preg_match('#^[^/]+/((?:orig|o)/.+)$#', $path, $m) === 1) {
+        if (1 === preg_match('#^[^/]+/((?:orig|o)/.+)$#', $path, $m)) {
             return $m[1];
         }
 

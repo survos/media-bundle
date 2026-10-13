@@ -29,13 +29,14 @@ final class FetchMediaCommand
     ): int {
         if (!$providerObj = $this->mediaManager->getProvider($provider)) {
             $io->error("Provider '{$provider}' not found");
-            $io->note('Available providers: ' . implode(', ', array_keys($this->mediaManager->getProviders())));
+            $io->note('Available providers: '.implode(', ', array_keys($this->mediaManager->getProviders())));
+
             return Command::FAILURE;
         }
 
         $options = array_filter([
             'channelId' => $channelId,
-            'userId'    => $userId,
+            'userId' => $userId,
         ]);
 
         $io->info("Fetching media from {$provider}...");
@@ -56,10 +57,11 @@ final class FetchMediaCommand
                 }
             } else {
                 $synced = $this->mediaManager->syncProvider($provider, $options);
-                $io->success("Fetched " . count($synced) . " media items from {$provider}");
+                $io->success('Fetched '.count($synced)." media items from {$provider}");
             }
         } catch (\Exception $e) {
-            $io->error("Fetch failed: " . $e->getMessage());
+            $io->error('Fetch failed: '.$e->getMessage());
+
             return Command::FAILURE;
         }
 

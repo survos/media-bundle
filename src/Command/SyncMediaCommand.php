@@ -17,9 +17,6 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-use function basename;
-use function getcwd;
-
 /**
  * LEGACY / DEBUG ENTRY POINT — part of the two-command bridge (media:ensure + media:sync) that
  * DatasetMediaDispatcher replaced. The dataset workflow's `dispatch` transition now publishes to
@@ -40,17 +37,17 @@ final class SyncMediaCommand
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly MediaBatchDispatcher   $dispatcher,
-        private readonly MediaRegistry          $mediaRegistry,
-        private readonly HttpClientInterface    $httpClient,
+        private readonly MediaBatchDispatcher $dispatcher,
+        private readonly MediaRegistry $mediaRegistry,
+        private readonly HttpClientInterface $httpClient,
         /**
          * The same write path the async callback uses. Running it here — in a
          * command, synchronously — is the whole point: whatever media:sync does
          * to a row is exactly what MediaRemoteEventConsumer will do to it off
          * the queue, so a bug is reproducible in the foreground.
          */
-        private readonly MediaUpdateApplier     $applier,
-        private readonly ?MessageBusInterface   $bus = null,
+        private readonly MediaUpdateApplier $applier,
+        private readonly ?MessageBusInterface $bus = null,
     ) {
     }
 
@@ -85,8 +82,8 @@ final class SyncMediaCommand
         ?string $dataset = null,
     ): int {
         /** @var MediaRepository $repo */
-        $repo   = $this->entityManager->getRepository(BaseMedia::class);
-        $client = basename((string) getcwd());
+        $repo = $this->entityManager->getRepository(BaseMedia::class);
+        $client = \basename((string) \getcwd());
         $io->note(sprintf('Client: %s', $client));
 
         // Hard fail, deliberately. --async used to fork each batch to DispatchBatchMessage so the
@@ -101,17 +98,13 @@ final class SyncMediaCommand
         // like a backlog to drain rather than dead mail. A flag that silently does nothing costs
         // more than one that says so.
         if ($async) {
-            throw new \InvalidArgumentException(
-                '--async was removed: DispatchBatchMessage no longer exists. media:sync is already '
-                .'driven by the dataset workflow\'s dispatch transition, which runs on a consumer '
-                .'(ds-dispatch), so batching to a second queue buys nothing. Drop the flag.'
-            );
+            throw new \InvalidArgumentException('--async was removed: DispatchBatchMessage no longer exists. media:sync is already driven by the dataset workflow\'s dispatch transition, which runs on a consumer (ds-dispatch), so batching to a second queue buys nothing. Drop the flag.');
         }
 
         // Single-URL debug mode
-        if ($url !== null) {
+        if (null !== $url) {
             $this->mediaRegistry->ensureMedia($url, flush: true);
-            $extra  = $sync ? ['sync' => true] : [];
+            $extra = $sync ? ['sync' => true] : [];
             $result = $this->dispatcher->dispatch($client, [$url], $extra);
             if (!$uploadOnly) {
                 $stats = $this->applier->applyBatch($result->rows);
@@ -120,20 +113,22 @@ final class SyncMediaCommand
                         $stats['applied'], $stats['changed'], $stats['skipped']));
                 }
             }
-            $io->success('URL dispatched' . ($uploadOnly ? ' (upload-only)' : ' and synced'));
+            $io->success('URL dispatched'.($uploadOnly ? ' (upload-only)' : ' and synced'));
+
             return Command::SUCCESS;
         }
 
         $statusFilter = $all ? null : 'new';
-        $totalCount   = $repo->countUrlsWithContext($statusFilter, $limit, $dataset);
+        $totalCount = $repo->countUrlsWithContext($statusFilter, $limit, $dataset);
 
         $io->note(sprintf('Media to sync: %d (upload-only: %s)',
             $totalCount,
             $uploadOnly ? 'yes' : 'no',
         ));
 
-        if ($totalCount === 0) {
+        if (0 === $totalCount) {
             $io->success('Nothing to sync.');
+
             return Command::SUCCESS;
         }
 
@@ -152,7 +147,7 @@ final class SyncMediaCommand
                 $batch = [];
             }
         }
-        if ($batch !== []) {
+        if ([] !== $batch) {
             $total = $this->flushBatch($client, $batch, $repo, $total, $io, $sync, $uploadOnly, $progress, $checkUrls);
         }
 
@@ -162,6 +157,7 @@ final class SyncMediaCommand
             $total,
             $uploadOnly ? ' (upload-only)' : ''
         ));
+
         return Command::SUCCESS;
     }
 
@@ -177,8 +173,8 @@ final class SyncMediaCommand
         mixed $progress,
         bool $checkUrls = false,
     ): int {
-        $urls       = array_keys($batch);
-        $contextMap = array_filter($batch, static fn($ctx) => $ctx !== []);
+        $urls = array_keys($batch);
+        $contextMap = array_filter($batch, static fn ($ctx) => [] !== $ctx);
 
         if ($io->isVeryVerbose()) {
             foreach ($urls as $u) {
@@ -195,12 +191,12 @@ final class SyncMediaCommand
         if ($checkUrls) {
             foreach ($batch as $checkUrl => $rawData) {
                 try {
-                    $head   = $this->httpClient->request('HEAD', $checkUrl, ['timeout' => 10]);
+                    $head = $this->httpClient->request('HEAD', $checkUrl, ['timeout' => 10]);
                     $status = $head->getStatusCode();
                 } catch (\Throwable $e) {
                     $status = $e->getMessage();
                 }
-                if ($status !== 200) {
+                if (200 !== $status) {
                     $io->error(sprintf('Source image did not return 200 (got %s): %s', $status, $checkUrl));
                     dump($rawData);
                     dump(['client' => $client, 'context' => $contextMap[$checkUrl] ?? null]);
@@ -210,30 +206,29 @@ final class SyncMediaCommand
         }
 
         // Publishing is always inline here; the dispatch transition is itself a consumer.
-        {
-            try {
-                $extra = $contextMap !== [] ? ['context' => $contextMap] : [];
-                if ($sync) {
-                    $extra['sync'] = true;
-                }
-                // media:sync publishes media and source context to mediary.
-                // Claims are projected separately so source, AI, OCR, and human
-                // metadata keep provenance instead of becoming opaque blobs.
-                $result = $this->dispatcher->dispatch($client, $urls, $extra);
-                if (!$uploadOnly) {
-                    // Raw rows, not the parsed MediaRegistration[] — the batch
-                    // response is converging on the webhook payload, and the
-                    // applier is the side that knows how to read both.
-                    $this->applier->applyBatch($result->rows);
-                }
-            } catch (\Symfony\Component\HttpClient\Exception\TransportException $e) {
-                // Timeout — log and continue, URLs remain status=new for next run
-                if ($io->isVerbose()) {
-                    $io->writeln(sprintf(
-                        '  <comment>timeout on %d URLs — skipping batch (retry on next sync)</comment>',
-                        count($urls)
-                    ));
-                }
+
+        try {
+            $extra = [] !== $contextMap ? ['context' => $contextMap] : [];
+            if ($sync) {
+                $extra['sync'] = true;
+            }
+            // media:sync publishes media and source context to mediary.
+            // Claims are projected separately so source, AI, OCR, and human
+            // metadata keep provenance instead of becoming opaque blobs.
+            $result = $this->dispatcher->dispatch($client, $urls, $extra);
+            if (!$uploadOnly) {
+                // Raw rows, not the parsed MediaRegistration[] — the batch
+                // response is converging on the webhook payload, and the
+                // applier is the side that knows how to read both.
+                $this->applier->applyBatch($result->rows);
+            }
+        } catch (\Symfony\Component\HttpClient\Exception\TransportException $e) {
+            // Timeout — log and continue, URLs remain status=new for next run
+            if ($io->isVerbose()) {
+                $io->writeln(sprintf(
+                    '  <comment>timeout on %d URLs — skipping batch (retry on next sync)</comment>',
+                    count($urls)
+                ));
             }
         }
 

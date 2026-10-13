@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Command;
@@ -16,20 +17,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
-use function array_chunk;
-use function array_column;
-use function array_diff;
-use function array_keys;
-use function array_map;
-use function array_merge;
-use function array_slice;
-use function array_values;
-use function ceil;
 use function count;
-use function implode;
-use function ksort;
-use function max;
-use function sprintf;
 
 /**
  * RECOVERY ONLY. Nothing should need this on a healthy day.
@@ -58,8 +46,8 @@ final class ReconcileMediaCommand
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly MediaBatchDispatcher   $dispatcher,
-        private readonly MediaUpdateApplier     $applier,
+        private readonly MediaBatchDispatcher $dispatcher,
+        private readonly MediaUpdateApplier $applier,
     ) {
     }
 
@@ -76,37 +64,37 @@ final class ReconcileMediaCommand
         #[Option('Include rows whose status is already terminal')] bool $all = false,
         #[Option('Probe and report, write nothing')] bool $dryRun = false,
     ): int {
-        $ids = $media !== null ? [$media] : $this->candidates($dataset, $limit, $all);
+        $ids = null !== $media ? [$media] : $this->candidates($dataset, $limit, $all);
 
-        if ($ids === []) {
+        if ([] === $ids) {
             $io->success('Nothing to reconcile.');
 
             return Command::SUCCESS;
         }
 
-        $io->writeln(sprintf(
+        $io->writeln(\sprintf(
             '%d row%s to probe%s%s',
-            count($ids),
-            count($ids) === 1 ? '' : 's',
-            $dataset !== null ? ' in ' . $dataset : '',
+            \count($ids),
+            1 === \count($ids) ? '' : 's',
+            null !== $dataset ? ' in '.$dataset : '',
             $dryRun ? ' (dry run)' : ''
         ));
 
-        $totals   = ['applied' => 0, 'changed' => 0, 'skipped' => 0, 'unmatched' => 0];
-        $missing  = [];
+        $totals = ['applied' => 0, 'changed' => 0, 'skipped' => 0, 'unmatched' => 0];
+        $missing = [];
         $timedOut = [];
-        $remote   = [];
+        $remote = [];
 
-        $io->progressStart(count($ids));
-        foreach (array_chunk($ids, max(1, $chunk)) as $batch) {
+        $io->progressStart(\count($ids));
+        foreach (\array_chunk($ids, \max(1, $chunk)) as $batch) {
             $results = $this->probe($batch, $timedOut);
 
             // probeMany drops ids mediary has never seen. Silence there would read as
             // "nothing to do" for a row that is in fact orphaned locally, so count them.
-            $answered = array_column($results, 'id');
-            $missing  = array_merge(
+            $answered = \array_column($results, 'id');
+            $missing = \array_merge(
                 $missing,
-                array_values(array_diff($batch, $answered, $timedOut))
+                \array_values(\array_diff($batch, $answered, $timedOut))
             );
 
             $updates = [];
@@ -121,31 +109,31 @@ final class ReconcileMediaCommand
                 }
             }
 
-            $io->progressAdvance(count($batch));
+            $io->progressAdvance(\count($batch));
         }
         $io->progressFinish();
 
-        ksort($remote);
+        \ksort($remote);
         $io->table(
             ['mediary says', 'rows'],
-            array_map(static fn (string $k, int $v): array => [$k, $v], array_keys($remote), $remote)
+            \array_map(static fn (string $k, int $v): array => [$k, $v], \array_keys($remote), $remote)
         );
 
-        if ($timedOut !== []) {
-            $io->warning(sprintf(
+        if ([] !== $timedOut) {
+            $io->warning(\sprintf(
                 '%d id%s could not be probed before the client timed out, even alone: %s',
-                count($timedOut),
-                count($timedOut) === 1 ? '' : 's',
-                implode(', ', array_slice($timedOut, 0, 10)) . (count($timedOut) > 10 ? ' …' : '')
+                \count($timedOut),
+                1 === \count($timedOut) ? '' : 's',
+                \implode(', ', \array_slice($timedOut, 0, 10)).(\count($timedOut) > 10 ? ' …' : '')
             ));
         }
 
-        if ($missing !== []) {
-            $io->warning(sprintf(
+        if ([] !== $missing) {
+            $io->warning(\sprintf(
                 '%d id%s unknown to mediary (never registered, or registered under a different identity): %s',
-                count($missing),
-                count($missing) === 1 ? '' : 's',
-                implode(', ', array_slice($missing, 0, 10)) . (count($missing) > 10 ? ' …' : '')
+                \count($missing),
+                1 === \count($missing) ? '' : 's',
+                \implode(', ', \array_slice($missing, 0, 10)).(\count($missing) > 10 ? ' …' : '')
             ));
         }
 
@@ -155,7 +143,7 @@ final class ReconcileMediaCommand
             return Command::SUCCESS;
         }
 
-        $io->success(sprintf(
+        $io->success(\sprintf(
             'applied %d, changed %d, unmatched %d',
             $totals['applied'],
             $totals['changed'],
@@ -183,6 +171,7 @@ final class ReconcileMediaCommand
      *
      * @param list<string> $ids
      * @param list<string> $timedOut collects ids that failed alone
+     *
      * @return list<MediaProbeResult>
      */
     private function probe(array $ids, array &$timedOut): array
@@ -190,17 +179,17 @@ final class ReconcileMediaCommand
         try {
             return $this->dispatcher->probeMany($ids);
         } catch (TransportExceptionInterface) {
-            if (count($ids) === 1) {
+            if (1 === \count($ids)) {
                 $timedOut[] = $ids[0];
 
                 return [];
             }
 
-            $half = (int) ceil(count($ids) / 2);
+            $half = (int) \ceil(\count($ids) / 2);
 
-            return array_merge(
-                $this->probe(array_slice($ids, 0, $half), $timedOut),
-                $this->probe(array_slice($ids, $half), $timedOut),
+            return \array_merge(
+                $this->probe(\array_slice($ids, 0, $half), $timedOut),
+                $this->probe(\array_slice($ids, $half), $timedOut),
             );
         }
     }
@@ -222,7 +211,7 @@ final class ReconcileMediaCommand
                 ->setParameter('terminal', MediaUpdateApplier::TERMINAL_STATUSES);
         }
 
-        if ($dataset !== null) {
+        if (null !== $dataset) {
             $qb->andWhere('m.dataset = :dataset')->setParameter('dataset', $dataset);
         }
 
@@ -230,6 +219,6 @@ final class ReconcileMediaCommand
             $qb->setMaxResults($limit);
         }
 
-        return array_map(static fn (array $row): string => (string) $row['id'], $qb->getQuery()->getArrayResult());
+        return \array_map(static fn (array $row): string => (string) $row['id'], $qb->getQuery()->getArrayResult());
     }
 }

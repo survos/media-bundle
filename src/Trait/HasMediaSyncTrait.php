@@ -7,7 +7,6 @@ namespace Survos\MediaBundle\Trait;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Survos\MediaBundle\Dto\MediaSyncItem;
-use Survos\MediaBundle\Interface\MediaSyncInterface;
 
 trait HasMediaSyncTrait
 {
@@ -19,15 +18,16 @@ trait HasMediaSyncTrait
 
     public function getMediaSync(): ?MediaSyncItem
     {
-        if ($this->mediaSync !== null) {
+        if (null !== $this->mediaSync) {
             return $this->mediaSync;
         }
 
-        if ($this->mediaSyncData === null) {
+        if (null === $this->mediaSyncData) {
             return null;
         }
 
         $this->mediaSync = MediaSyncItem::fromArray($this->mediaSyncData);
+
         return $this->mediaSync;
     }
 
@@ -40,7 +40,7 @@ trait HasMediaSyncTrait
     #[ORM\PostLoad]
     public function onMediaSyncPostLoad(): void
     {
-        if ($this->mediaSyncData !== null && $this->mediaSync === null) {
+        if (null !== $this->mediaSyncData && null === $this->mediaSync) {
             $this->mediaSync = MediaSyncItem::fromArray($this->mediaSyncData);
         }
     }

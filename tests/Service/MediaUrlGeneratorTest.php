@@ -37,7 +37,7 @@ final class MediaUrlGeneratorTest extends TestCase
 
         // Not the xxh3 asset id: a bare URL has no row, so the key must carry its own source.
         $key = MediaKeyService::keyFromString(self::URL);
-        self::assertSame('https://media.example.org/resize/small/' . $key, $url);
+        self::assertSame('https://media.example.org/resize/small/'.$key, $url);
 
         // ...and it must still round-trip out of the generated URL.
         self::assertSame(self::URL, MediaKeyService::stringFromEncoded($key));

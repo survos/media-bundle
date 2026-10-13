@@ -19,7 +19,8 @@ final class TagImagesCommand
 {
     public function __construct(
         private readonly ImageTaggingService $tagger,
-    ) {}
+    ) {
+    }
 
     public function __invoke(
         SymfonyStyle $io,
@@ -58,11 +59,13 @@ final class TagImagesCommand
             && !str_starts_with($url, 'data:')
         ) {
             $io->error('URL must start with http://, https://, or data:.');
+
             return Command::INVALID;
         }
 
         if (!\in_array($detail, ['low', 'high'], true)) {
             $io->error('--detail must be "low" or "high".');
+
             return Command::INVALID;
         }
 
@@ -71,24 +74,25 @@ final class TagImagesCommand
         if ($dryRun) {
             $io->note('DRY RUN — returning a synthetic example payload.');
             $result = [
-                'tags'        => ['test', 'dry-run', 'no-api-call'],
-                'safety'      => 'safe',
+                'tags' => ['test', 'dry-run', 'no-api-call'],
+                'safety' => 'safe',
                 'description' => 'This is a dry-run placeholder.',
                 'time_period' => null,
-                'confidence'  => 'low',
+                'confidence' => 'low',
             ];
         } else {
             try {
                 $result = $this->tagger->tagImageUrl($url, [
-                    'detail'       => $detail,
-                    'lang'         => $lang,
-                    'year'         => $year,
-                    'location'     => $location,
+                    'detail' => $detail,
+                    'lang' => $lang,
+                    'year' => $year,
+                    'location' => $location,
                     'knownTagsCsv' => $knownTagsCsv,
-                    'hint'         => $hint,
+                    'hint' => $hint,
                 ]);
             } catch (\Throwable $e) {
-                $io->error('OpenAI call failed: ' . $e->getMessage());
+                $io->error('OpenAI call failed: '.$e->getMessage());
+
                 return Command::FAILURE;
             }
         }

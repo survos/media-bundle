@@ -1,16 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
-use Survos\MediaBundle\EventListener\MediaPostLoadListener;
-use Survos\MediaBundle\Provider\YouTubeProvider;
-use Survos\MediaBundle\Provider\FlickrProvider;
-use Survos\MediaBundle\Service\MediaBatchDispatcher;
-use Survos\MediaBundle\Service\SidecarClient;
 use Survos\DataContracts\Util\MediaKeyService;
+use Survos\MediaBundle\EventListener\MediaPostLoadListener;
+use Survos\MediaBundle\Menu\MediaMenuSubscriber;
+use Survos\MediaBundle\Provider\FlickrProvider;
+use Survos\MediaBundle\Provider\YouTubeProvider;
+use Survos\MediaBundle\Service\MediaBatchDispatcher;
 use Survos\MediaBundle\Service\MediaManager;
 use Survos\MediaBundle\Service\MediaUpdateApplier;
-use Survos\MediaBundle\Menu\MediaMenuSubscriber;
+use Survos\MediaBundle\Service\SidecarClient;
 use Survos\MediaBundle\Twig\MediaExtension;
 
 return static function (ContainerConfigurator $container): void {
@@ -20,13 +22,13 @@ return static function (ContainerConfigurator $container): void {
         ->autoconfigure();
 
     // Services
-     $services->set(MediaManager::class)
-         ->public()
-         ->arg('$cacheTtl', param('survos_media.cache_ttl'));
+    $services->set(MediaManager::class)
+        ->public()
+        ->arg('$cacheTtl', param('survos_media.cache_ttl'));
 
-      $services->set(\Survos\MediaBundle\Service\MediaUrlGenerator::class)
-          ->arg('$mediaServerHost', param('survos_media.media_server.host'))
-          ->arg('$mediaServerResizePath', param('survos_media.media_server.resize_path'));
+    $services->set(\Survos\MediaBundle\Service\MediaUrlGenerator::class)
+        ->arg('$mediaServerHost', param('survos_media.media_server.host'))
+        ->arg('$mediaServerResizePath', param('survos_media.media_server.resize_path'));
 
     // Event Listener
     $services->set(MediaPostLoadListener::class)

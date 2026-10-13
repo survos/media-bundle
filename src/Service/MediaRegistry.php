@@ -1,20 +1,15 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
-use InvalidArgumentException;
-use RuntimeException;
+use Survos\DataContracts\Util\MediaIdentity;
 use Survos\MediaBundle\Dto\MediaSyncItem;
 use Survos\MediaBundle\Entity\BaseMedia;
 use Survos\MediaBundle\Entity\Photo;
-use Survos\MediaBundle\Service\MediaUrlGenerator;
-use Survos\DataContracts\Util\MediaIdentity;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
-use SplFileInfo;
-use function is_string;
-use function trim;
 
 final class MediaRegistry
 {
@@ -25,21 +20,21 @@ final class MediaRegistry
     }
 
     public function ensureMedia(
-        string|UploadedFile|SplFileInfo $source,
+        string|UploadedFile|\SplFileInfo $source,
         ?string $class = null,
         bool $flush = false,
-        array $sourceMeta = []
+        array $sourceMeta = [],
     ): BaseMedia {
         $class ??= Photo::class;
 
         if (!is_subclass_of($class, BaseMedia::class)) {
-            throw new InvalidArgumentException(sprintf('Class "%s" must extend %s.', $class, BaseMedia::class));
+            throw new \InvalidArgumentException(sprintf('Class "%s" must extend %s.', $class, BaseMedia::class));
         }
 
-        if (is_string($source)) {
-            $url = trim($source);
-            if ($url === '') {
-                throw new InvalidArgumentException('Media URL must not be empty.');
+        if (\is_string($source)) {
+            $url = \trim($source);
+            if ('' === $url) {
+                throw new \InvalidArgumentException('Media URL must not be empty.');
             }
 
             $repository = $this->entityManager->getRepository(BaseMedia::class);
@@ -47,9 +42,10 @@ final class MediaRegistry
             $existing = $repository->find($id);
             if ($existing instanceof BaseMedia) {
                 $this->mergeSourceMeta($existing, $sourceMeta);
-                if ($flush && $sourceMeta !== []) {
+                if ($flush && [] !== $sourceMeta) {
                     $this->entityManager->flush();
                 }
+
                 return $existing;
             }
 
@@ -67,12 +63,12 @@ final class MediaRegistry
             return $media;
         }
 
-        if ($source instanceof UploadedFile || $source instanceof SplFileInfo) {
+        if ($source instanceof UploadedFile || $source instanceof \SplFileInfo) {
             if (!$source->isReadable()) {
-                throw new RuntimeException('Local media file is not readable.');
+                throw new \RuntimeException('Local media file is not readable.');
             }
 
-            $pseudoUrl = 'local://' . $source->getBasename();
+            $pseudoUrl = 'local://'.$source->getBasename();
             $id = MediaIdentity::idFromOriginalUrl($pseudoUrl);
 
             /** @var BaseMedia $media */
@@ -90,7 +86,7 @@ final class MediaRegistry
             return $media;
         }
 
-        throw new InvalidArgumentException('Unsupported media source type.');
+        throw new \InvalidArgumentException('Unsupported media source type.');
     }
 
     public function ensureSyncItem(MediaSyncItem $item, ?string $class = null, bool $flush = false): BaseMedia
@@ -99,8 +95,8 @@ final class MediaRegistry
         // Single named definition of the row's identity URL — see MediaSyncItem::identityUrl().
         $url = $item->identityUrl();
 
-        if ($url === null) {
-            throw new InvalidArgumentException('MediaSyncItem must have an imageUrl, iiifManifest-resolved image URL, iiifBase, or thumbnailUrl.');
+        if (null === $url) {
+            throw new \InvalidArgumentException('MediaSyncItem must have an imageUrl, iiifManifest-resolved image URL, iiifBase, or thumbnailUrl.');
         }
 
         /** @var BaseMedia $media */
@@ -126,10 +122,10 @@ final class MediaRegistry
     {
         $sourceMeta = array_filter(
             $sourceMeta,
-            static fn(mixed $value): bool => $value !== null && $value !== [] && $value !== ""
+            static fn (mixed $value): bool => null !== $value && [] !== $value && '' !== $value
         );
 
-        if ($sourceMeta === []) {
+        if ([] === $sourceMeta) {
             return;
         }
 
@@ -140,6 +136,4 @@ final class MediaRegistry
     {
         $this->entityManager->flush();
     }
-
-
 }

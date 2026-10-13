@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Survos\MediaBundle\Provider;
 
 use Survos\MediaBundle\Entity\BaseMedia;
@@ -10,7 +12,7 @@ class FlickrProvider extends AbstractProvider
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        array $config = []
+        array $config = [],
     ) {
         parent::__construct($config);
     }
@@ -22,7 +24,7 @@ class FlickrProvider extends AbstractProvider
 
     public function supports(string $type): bool
     {
-        return $type === 'photo';
+        return 'photo' === $type;
     }
 
     public function fetchAll(array $options = []): iterable
@@ -44,7 +46,7 @@ class FlickrProvider extends AbstractProvider
             $response = $this->httpClient->request('GET', $url);
             $data = $response->toArray();
 
-            if ($data['stat'] !== 'ok') {
+            if ('ok' !== $data['stat']) {
                 break;
             }
 
@@ -52,7 +54,7 @@ class FlickrProvider extends AbstractProvider
                 yield $this->normalize($photo);
             }
 
-            $page++;
+            ++$page;
         } while ($page <= $data['photos']['pages']);
     }
 
@@ -67,7 +69,7 @@ class FlickrProvider extends AbstractProvider
         $response = $this->httpClient->request('GET', $url);
         $data = $response->toArray();
 
-        if ($data['stat'] !== 'ok') {
+        if ('ok' !== $data['stat']) {
             return null;
         }
 
@@ -77,26 +79,26 @@ class FlickrProvider extends AbstractProvider
     public function normalize(array $rawData): BaseMedia
     {
         $id = $rawData['id'];
-        
+
         /** @var Photo $photo */
         $photo = $this->createMedia('photo', $id);
-        
+
         $photo
             ->setTitle($rawData['title'] ?? 'Untitled')
             ->setDescription($rawData['description']['_content'] ?? '');
-            
+
         $photo->thumbnailUrl = sprintf(
             'https://live.staticflickr.com/%s/%s_%s_m.jpg',
             $rawData['server'],
             $id,
             $rawData['secret']
         );
-        
+
         $photo->externalUrl = sprintf('https://www.flickr.com/photos/%s/%s', $rawData['owner'], $id);
         $photo->rawData = $rawData;
 
         if (isset($rawData['dateupload'])) {
-            $photo->publishedAt = new \DateTimeImmutable('@' . $rawData['dateupload']);
+            $photo->publishedAt = new \DateTimeImmutable('@'.$rawData['dateupload']);
         }
 
         return $photo;

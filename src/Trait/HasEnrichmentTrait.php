@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Trait;
 
-use Doctrine\DBAL\Types\Types;
-use Doctrine\ORM\Mapping as ORM;
-use Survos\FieldBundle\Attribute\Field;
 use Survos\DataContracts\Dto\MediaEnrichment;
+use Survos\FieldBundle\Attribute\Field;
 use Symfony\Component\Serializer\Attribute\Groups;
 
 /**
@@ -31,13 +29,13 @@ trait HasEnrichmentTrait
             }
 
             $result = $entry['result'] ?? null;
-            if (is_array($result) && $result !== []) {
+            if (is_array($result) && [] !== $result) {
                 return $this->normalizeEnrichmentPayload($result);
             }
         }
 
         $dto = $this->getMediaEnrichmentDto();
-        if ($dto === null) {
+        if (null === $dto) {
             return [];
         }
 
@@ -54,7 +52,7 @@ trait HasEnrichmentTrait
             'has_text' => $dto->hasText ? true : null,
             'confidence' => $dto->confidence,
             'speculations' => $dto->speculations,
-        ], static fn(mixed $value): bool => $value !== null && $value !== [] && $value !== false);
+        ], static fn (mixed $value): bool => null !== $value && [] !== $value && false !== $value);
     }
 
     /**
@@ -62,6 +60,7 @@ trait HasEnrichmentTrait
      * computed getters, regardless of whether it came from defaults or aiCompleted.
      *
      * @param array<string,mixed> $enrich
+     *
      * @return array<string,mixed>
      */
     private function normalizeEnrichmentPayload(array $enrich): array
@@ -88,7 +87,7 @@ trait HasEnrichmentTrait
      */
     private function normalizeKeywordEntries(mixed $keywords, string $defaultConfidence): array
     {
-        if (!is_array($keywords) || $keywords === []) {
+        if (!is_array($keywords) || [] === $keywords) {
             return [];
         }
 
@@ -99,11 +98,11 @@ trait HasEnrichmentTrait
                 $term = trim((string) $keywords[$i]);
                 $confidence = $this->normalizeKeywordConfidence($keywords[$i + 1] ?? $defaultConfidence, $defaultConfidence);
                 $basis = trim((string) ($keywords[$i + 2] ?? ''));
-                if ($term !== '') {
+                if ('' !== $term) {
                     $entries[] = [
                         'term' => $term,
                         'confidence' => $confidence,
-                        'basis' => $basis !== '' ? $basis : null,
+                        'basis' => '' !== $basis ? $basis : null,
                     ];
                 }
             }
@@ -114,7 +113,7 @@ trait HasEnrichmentTrait
         foreach ($keywords as $keyword) {
             if (is_string($keyword) || is_numeric($keyword)) {
                 $term = trim((string) $keyword);
-                if ($term !== '') {
+                if ('' !== $term) {
                     $entries[] = [
                         'term' => $term,
                         'confidence' => $defaultConfidence,
@@ -129,7 +128,7 @@ trait HasEnrichmentTrait
             }
 
             $term = trim((string) ($keyword['term'] ?? $keyword['keyword'] ?? $keyword['name'] ?? ''));
-            if ($term === '') {
+            if ('' === $term) {
                 continue;
             }
 
@@ -137,7 +136,7 @@ trait HasEnrichmentTrait
             $entries[] = [
                 'term' => $term,
                 'confidence' => $this->normalizeKeywordConfidence($keyword['confidence'] ?? $defaultConfidence, $defaultConfidence),
-                'basis' => is_string($basis) && trim($basis) !== '' ? trim($basis) : null,
+                'basis' => is_string($basis) && '' !== trim($basis) ? trim($basis) : null,
             ];
         }
 
@@ -149,7 +148,7 @@ trait HasEnrichmentTrait
      */
     private function looksLikeTripletKeywords(array $keywords): bool
     {
-        if (!array_is_list($keywords) || count($keywords) < 3 || count($keywords) % 3 !== 0) {
+        if (!array_is_list($keywords) || count($keywords) < 3 || 0 !== count($keywords) % 3) {
             return false;
         }
 
@@ -177,6 +176,7 @@ trait HasEnrichmentTrait
 
     /**
      * @param list<array{term:string,confidence:string,basis:?string}> $entries
+     *
      * @return list<array{term:string,confidence:string,basis:?string}>
      */
     private function dedupeKeywordEntries(array $entries): array
@@ -190,7 +190,7 @@ trait HasEnrichmentTrait
                 continue;
             }
 
-            if ($deduped[$key]['basis'] === null && $entry['basis'] !== null) {
+            if (null === $deduped[$key]['basis'] && null !== $entry['basis']) {
                 $deduped[$key]['basis'] = $entry['basis'];
             }
 
@@ -214,15 +214,16 @@ trait HasEnrichmentTrait
 
     /**
      * @param list<array{term:string,confidence:string,basis:?string}> $entries
+     *
      * @return string[]
      */
     private function keywordTermsForConfidence(array $entries, string $confidence): array
     {
         return array_values(array_map(
-            static fn(array $entry): string => $entry['term'],
+            static fn (array $entry): string => $entry['term'],
             array_values(array_filter(
                 $entries,
-                static fn(array $entry): bool => $entry['confidence'] === $confidence
+                static fn (array $entry): bool => $entry['confidence'] === $confidence
             ))
         ));
     }
@@ -239,32 +240,32 @@ trait HasEnrichmentTrait
     public function getSourceMeta(): array
     {
         $import = $this->defaults['import'] ?? [];
-        if ($import === []) {
+        if ([] === $import) {
             return [];
         }
 
         // Priority-ordered: first matching key wins for each dcterms: field
         $map = [
-            'title'         => 'dcterms:title',
-            'description'   => 'dcterms:description',
-            'date_display'  => 'dcterms:date',
-            'date'          => 'dcterms:date',
-            'creators'      => 'dcterms:creator',
-            'subjects'      => 'dcterms:subject',
+            'title' => 'dcterms:title',
+            'description' => 'dcterms:description',
+            'date_display' => 'dcterms:date',
+            'date' => 'dcterms:date',
+            'creators' => 'dcterms:creator',
+            'subjects' => 'dcterms:subject',
             'subject_facet' => 'dcterms:subject',
-            'collections'   => 'dcterms:isPartOf',
-            'institution'   => 'dcterms:publisher',
-            'language'      => 'dcterms:language',
-            'rights'        => 'rights',         // legacy alias handled by SourceClaims
-            'license'       => 'license_uri',
+            'collections' => 'dcterms:isPartOf',
+            'institution' => 'dcterms:publisher',
+            'language' => 'dcterms:language',
+            'rights' => 'rights',         // legacy alias handled by SourceClaims
+            'license' => 'license_uri',
             'reuse_allowed' => 'reuse_allowed',
-            'source_url'    => 'dcterms:source',
-            'detail_url'    => 'dcterms:source',
+            'source_url' => 'dcterms:source',
+            'detail_url' => 'dcterms:source',
         ];
 
         $out = [];
         foreach ($map as $src => $dst) {
-            if (!isset($out[$dst]) && isset($import[$src]) && $import[$src] !== null && $import[$src] !== '') {
+            if (!isset($out[$dst]) && isset($import[$src]) && null !== $import[$src] && '' !== $import[$src]) {
                 $out[$dst] = $import[$src];
             }
         }
@@ -278,7 +279,7 @@ trait HasEnrichmentTrait
 
         // Geo extras — shown in catch-all section
         foreach (['latitude', 'longitude', 'city', 'state', 'county', 'country'] as $geo) {
-            if (isset($import[$geo]) && $import[$geo] !== null) {
+            if (isset($import[$geo]) && null !== $import[$geo]) {
                 $out[$geo] = $import[$geo];
             }
         }
@@ -301,12 +302,13 @@ trait HasEnrichmentTrait
     {
         $enrich = $this->getEnrichment();
         $all = array_merge(
-            $enrich['keywords_high']   ?? $enrich['keywords'] ?? [],
+            $enrich['keywords_high'] ?? $enrich['keywords'] ?? [],
             $enrich['keywords_medium'] ?? [],
-            $enrich['keywords_low']    ?? [],
+            $enrich['keywords_low'] ?? [],
         );
+
         return array_values(array_unique(array_filter(array_map(
-            static fn(mixed $kw): string => is_array($kw) ? (string) ($kw['term'] ?? '') : (string) $kw,
+            static fn (mixed $kw): string => is_array($kw) ? (string) ($kw['term'] ?? '') : (string) $kw,
             $all
         ))));
     }
@@ -329,7 +331,8 @@ trait HasEnrichmentTrait
     public function getEnrichContentType(): ?string
     {
         $v = $this->getEnrichment()['content_type'] ?? null;
-        return is_string($v) && $v !== '' ? $v : null;
+
+        return is_string($v) && '' !== $v ? $v : null;
     }
 
     /**
@@ -341,6 +344,7 @@ trait HasEnrichmentTrait
     public function getEnrichHasText(): ?bool
     {
         $enrich = $this->getEnrichment();
+
         return isset($enrich['has_text']) ? (bool) $enrich['has_text'] : null;
     }
 
@@ -353,7 +357,7 @@ trait HasEnrichmentTrait
     public function getEnrichPlaces(): array
     {
         return array_values(array_filter(array_map(
-            static fn(mixed $p): string => is_array($p) ? (string) ($p['name'] ?? '') : (string) $p,
+            static fn (mixed $p): string => is_array($p) ? (string) ($p['name'] ?? '') : (string) $p,
             (array) ($this->getEnrichment()['places'] ?? [])
         )));
     }
@@ -367,7 +371,8 @@ trait HasEnrichmentTrait
     public function getEnrichDateHint(): ?string
     {
         $v = $this->getEnrichment()['date_hint'] ?? null;
-        return is_string($v) && $v !== '' ? $v : null;
+
+        return is_string($v) && '' !== $v ? $v : null;
     }
 
     /**
@@ -377,6 +382,7 @@ trait HasEnrichmentTrait
     public function getEnrichConfidence(): ?float
     {
         $v = $this->getEnrichment()['confidence'] ?? null;
+
         return is_numeric($v) ? (float) $v : null;
     }
 
@@ -385,7 +391,7 @@ trait HasEnrichmentTrait
      */
     public function isEnriched(): bool
     {
-        return $this->getEnrichment() !== [];
+        return [] !== $this->getEnrichment();
     }
 
     /**
@@ -398,9 +404,10 @@ trait HasEnrichmentTrait
     public function getMediaEnrichmentDto(): ?MediaEnrichment
     {
         $completed = $this->aiCompleted ?? [];
-        if ($completed === []) {
+        if ([] === $completed) {
             return null;
         }
+
         return MediaEnrichment::fromCompleted($completed);
     }
 

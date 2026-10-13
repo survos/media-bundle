@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Trait;
@@ -54,12 +55,12 @@ trait HasAiVisionTrait
 
     public function hasAiTaskPending(): bool
     {
-        return $this->aiQueue !== [];
+        return [] !== $this->aiQueue;
     }
 
     public function isAiComplete(): bool
     {
-        return $this->aiQueue === [] && $this->aiCompleted !== [];
+        return [] === $this->aiQueue && [] !== $this->aiCompleted;
     }
 
     // ── Result accessors ──────────────────────────────────────────────────────
@@ -71,6 +72,7 @@ trait HasAiVisionTrait
                 return $entry['result'] ?? null;
             }
         }
+
         return null;
     }
 
@@ -83,6 +85,7 @@ trait HasAiVisionTrait
                 $results[$entry['task']] = $entry['result'] ?? null;
             }
         }
+
         return $results;
     }
 

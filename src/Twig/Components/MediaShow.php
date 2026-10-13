@@ -1,11 +1,12 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\MediaBundle\Twig\Components;
 
+use Survos\IiifBundle\Service\IiifUrl;
 use Survos\MediaBundle\Dto\MediaSyncItem;
 use Survos\MediaBundle\Interface\MediaSyncInterface;
-use Survos\IiifBundle\Service\IiifUrl;
 use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 
 /**
@@ -89,6 +90,7 @@ final class MediaShow
         if ($this->entity instanceof MediaSyncInterface) {
             return $this->entity->getMediaSync();
         }
+
         return null;
     }
 
@@ -100,17 +102,18 @@ final class MediaShow
     /** True when there's anything to show in the image card. */
     public function hasImage(): bool
     {
-        return $this->iiifInfoUrl !== null
-            || $this->iiifBase !== null
-            || $this->imageUrl !== null;
+        return null !== $this->iiifInfoUrl
+            || null !== $this->iiifBase
+            || null !== $this->imageUrl;
     }
 
     /** Best "open full size" URL — IIIF max (real endpoints) or the source image. */
     public function fullSizeUrl(): ?string
     {
-        if ($this->iiifBase !== null) {
+        if (null !== $this->iiifBase) {
             return IiifUrl::imageUrl($this->iiifBase);
         }
+
         return $this->imageUrl;
     }
 }

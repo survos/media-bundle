@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Survos\MediaBundle\Command;
 
 use Survos\MediaBundle\Service\MediaManager;
@@ -23,6 +25,7 @@ final class FetchYouTubeCommand
     ): int {
         if (!$channelId) {
             $io->error('Channel ID is required. Use --channel-id=CHANNEL_ID');
+
             return Command::FAILURE;
         }
 
@@ -30,22 +33,23 @@ final class FetchYouTubeCommand
 
         try {
             $synced = $this->mediaManager->syncProvider('youtube', ['channelId' => $channelId]);
-            $io->success("Successfully fetched " . count($synced) . " videos from YouTube");
+            $io->success('Successfully fetched '.count($synced).' videos from YouTube');
 
             $io->table(
                 ['Code', 'Title', 'Published'],
-                array_map(fn($video) => [
+                array_map(fn ($video) => [
                     $video->code,
-                    substr($video->getTitle() ?? 'Untitled', 0, 50) . '...',
+                    substr($video->getTitle() ?? 'Untitled', 0, 50).'...',
                     $video->publishedAt?->format('Y-m-d H:i'),
                 ], array_slice($synced, 0, 10))
             );
 
             if (count($synced) > 10) {
-                $io->note('Showing first 10 results. Total: ' . count($synced));
+                $io->note('Showing first 10 results. Total: '.count($synced));
             }
         } catch (\Exception $e) {
-            $io->error("Failed to fetch YouTube videos: " . $e->getMessage());
+            $io->error('Failed to fetch YouTube videos: '.$e->getMessage());
+
             return Command::FAILURE;
         }
 
