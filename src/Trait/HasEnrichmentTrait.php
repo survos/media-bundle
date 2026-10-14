@@ -13,9 +13,8 @@ use Symfony\Component\Serializer\Attribute\Groups;
  *
  * @deprecated since survos/media-bundle 2.1. Store enrichment as explicit
  * claims/DTOs instead of writing task payloads into a catch-all `defaults`
- * JSON column. For low-resolution AI image URLs, implement
- * Survos\ImgproxyBundle\Contract\AiThumbnailProviderInterface or use
- * Survos\ImgproxyBundle\Service\ImgproxyUrlBuilder directly.
+ * JSON column. For low-resolution AI image URLs, use
+ * Survos\ImageContracts\ImageUrlBuilderInterface::preset($url, 'observe').
  */
 trait HasEnrichmentTrait
 {
