@@ -9,10 +9,13 @@ use Survos\Kit\Traits\HasDoctrineEntities;
 use Survos\MediaBundle\Service\ImageTaggingService;
 use Survos\MediaBundle\Service\MediaRegistry;
 use Survos\MediaBundle\Service\OcrService;
+use Survos\WorkflowMessengerBundle\SurvosWorkflowMessengerBundle;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Kernel\RequiredBundle;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
+#[RequiredBundle(SurvosWorkflowMessengerBundle::class)]
 // Symfony\Component\HttpKernel\Bundle\Bundle <-- Flex auto-registration marker (see Survos\Kit\AbstractSurvosBundle)
 class SurvosMediaBundle extends AbstractSurvosBundle
 {

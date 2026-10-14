@@ -60,7 +60,7 @@ return static function (ContainerConfigurator $container): void {
     $services->set(MediaUpdateApplier::class);
 
     // Menu (only when tabler-bundle is installed; it's a suggest, not a hard require)
-    if (class_exists(\Survos\TablerBundle\Menu\AbstractAdminMenuSubscriber::class)) {
+    if (class_exists(\Survos\TablerBundle\Event\MenuEvent::class)) {
         $services->set(MediaMenuSubscriber::class);
     }
 

@@ -84,9 +84,9 @@ Same rule for the preset names (`MediaPreset`), the batch payload shape (`BatchP
 ```php
 use Survos\MediaBundle\Entity\BaseMedia;
 use Survos\MediaBundle\Workflow\MediaWorkflowDefinition;
-use Survos\StateBundle\Attribute\Workflow;
+use Survos\WorkflowExtrasBundle\Attribute\AsWorkflow;
 
-#[Workflow(supports: [BaseMedia::class], name: self::WORKFLOW_NAME)]
+#[AsWorkflow(supports: [BaseMedia::class], name: self::WORKFLOW_NAME)]
 final class MediaWorkflow extends MediaWorkflowDefinition
 {
     public const WORKFLOW_NAME = 'media';
@@ -94,12 +94,12 @@ final class MediaWorkflow extends MediaWorkflowDefinition
 ```
 
 An empty body is the normal case — you inherit `new → dispatch → dispatched → sync → synced`
-(plus `failed`). `MediaWorkflowDefinition` deliberately carries **no** `#[Workflow]` attribute, so
+(plus `failed`). `MediaWorkflowDefinition` deliberately carries **no** `#[AsWorkflow]` attribute, so
 the base never self-registers; the app decides. An app that needs its own steps redeclares just
 the constant it wants to re-point (ssai, for instance, gives `PLACE_NEW` a `next` that runs triage
 before dispatch), and gets application-specific behaviour without forking the definition.
 
-`PLACE_NEW` declares `next: [TRANSITION_DISPATCH]`, so state-bundle's `InitialPlaceKickoffListener`
+`PLACE_NEW` declares `next: [TRANSITION_DISPATCH]`, so workflow-extras' `WorkflowKickoffListener`
 queues the dispatch on `postFlush`. Persist a row and the rest runs unattended:
 
 ```php
@@ -110,14 +110,24 @@ $em->flush();   // → media.dispatch queued → mediary → callback → status
 `supports` is `BaseMedia` rather than `Photo` so `Video` and `Audio` get the same lifecycle;
 Symfony matches by instanceof and the marking lives on the base.
 
-> Requires **state-bundle**, which is why it moved from `suggest` to `require`. It used to be
-> optional back when the plan was to keep image URLs in `Media` and generate thumbnails locally.
-> That plan is gone: all `Media` rows interact with mediary, and that interaction has state.
->
-> Needs state-bundle **≥ 2.27.4**. Before that, `InitialPlaceKickoffListener` resolved the
-> workflow by exact class name, so a workflow declared `supports: [BaseMedia::class]` never
-> kicked off for the `Photo` rows anyone actually persists — silently, with no log line. Rows sat
-> at `marking=new` forever.
+Requires Symfony 8.2, workflow-extras, and workflow-messenger. State-bundle is no longer
+required. The persisted marking remains the same nullable string column, with the same
+`new`, `dispatched`, `synced`, and `failed` values. Remote status is still independent.
+
+Configure the queue explicitly (choose the transport appropriate to the application):
+
+```yaml
+# config/packages/messenger.yaml
+framework:
+    messenger:
+        transports:
+            media.dispatch: 'doctrine://default?queue_name=media.dispatch'
+```
+
+Enable native attribute discovery with `workflow: ~`. Consume `media.dispatch` to process
+newly persisted media. Application-specific dispatch listeners still perform the actual
+Mediary request; this definition supplies the lifecycle, not an HTTP client side effect.
+Menus use `AsMenuListener(MenuSlot::ADMIN_NAVBAR_MENU)` when Tabler is installed.
 
 ### What this replaces
 

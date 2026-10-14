@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Survos\MediaBundle\Workflow;
 
-use Survos\StateBundle\Attribute\Place;
-use Survos\StateBundle\Attribute\Transition;
+use Survos\WorkflowExtrasBundle\Attribute\Place;
+use Survos\WorkflowExtrasBundle\Attribute\Transition;
+use Survos\WorkflowMessengerBundle\Attribute\Transition as AsyncTransition;
 
 /**
  * The canonical lifecycle of a local media row's relationship WITH MEDIARY.
@@ -21,36 +22,30 @@ use Survos\StateBundle\Attribute\Transition;
  * Constants are shared"), MediaUpdateApplier::STATUS_RANK, and harvest's
  * DatasetEnrichGuard::TERMINAL — each in a different repository, each free to drift.
  *
- * NO #[Workflow] ATTRIBUTE HERE, ON PURPOSE. state-bundle's AttributesWorkflowConfigBuilder skips
- * any class without one, so this base never registers itself and never claims an entity. An app
- * subclasses it, adds #[Workflow(supports: [...], name: ...)], and gets the standard mediary
- * interaction for free:
+ * An application registers its supported entity types using Symfony 8.2 attributes:
  *
- *     #[Workflow(supports: [Photo::class], name: self::WORKFLOW_NAME)]
+ *     #[AsWorkflow(supports: [Photo::class], name: self::WORKFLOW_NAME)]
  *     final class MediaWorkflow extends MediaWorkflowDefinition {
  *         public const WORKFLOW_NAME = 'media';
  *     }
  *
- * Inheritance works because the builder reads getReflectionConstants() without filtering on the
- * declaring class, so inherited places and transitions are discovered. An app that needs extra
- * steps redeclares the constant it wants to re-point — e.g. giving PLACE_NEW a different `next`
- * to slip a local step in front of the dispatch. Note the tradeoff: a redeclared constant no
- * longer tracks changes made here.
+ * Symfony discovers the inherited place and transition constants. Applications may override
+ * a constant to customize a step. Configure the media.dispatch Messenger transport explicitly.
  */
 class MediaWorkflowDefinition
 {
     /**
      * Registered locally, not yet offered to mediary.
      *
-     * `next` is what makes "create a Media row" the only manual step: state-bundle's
-     * InitialPlaceKickoffListener collects on postPersist and dispatches on postFlush, so
+     * `next` is what makes "create a Media row" the only manual step: workflow-extras'
+     * WorkflowKickoffListener collects on postPersist and dispatches on postFlush, so
      * persisting a row in this place queues its own dispatch. postFlush and not postPersist
-     * because a TransitionMessage carries only an id — the row has to be committed before a
+     * because a TransitionRequest carries only an id — the row has to be committed before a
      * worker can find it.
      */
     #[Place(
         initial: true,
-        info: 'registered locally',
+        label: 'registered locally',
         description: 'media row exists here; mediary has not been told about it yet',
         next: [self::TRANSITION_DISPATCH],
     )]
@@ -61,13 +56,13 @@ class MediaWorkflowDefinition
      * it has seen before that is the terminal state, in one round trip, with no webhook involved.
      */
     #[Place(
-        info: 'sent to mediary',
+        label: 'sent to mediary',
         description: 'registered with mediary; awaiting terminal status if it was not already known',
     )]
     public const PLACE_DISPATCHED = 'dispatched';
 
     /** Mediary has reported a terminal place for this row and it has been applied locally. */
-    #[Place(info: 'in sync with mediary', description: 'terminal remote status applied locally')]
+    #[Place(label: 'in sync with mediary', description: 'terminal remote status applied locally')]
     public const PLACE_SYNCED = 'synced';
 
     /**
@@ -79,43 +74,36 @@ class MediaWorkflowDefinition
      * that look finished but were never processed. A listener here should let the exception
      * escape so messenger retries and the row lands somewhere visible.
      */
-    #[Place(info: 'dispatch failed', description: 'exhausted retries; needs looking at')]
+    #[Place(label: 'dispatch failed', description: 'exhausted retries; needs looking at')]
     public const PLACE_FAILED = 'failed';
 
     /**
      * Publish this row to mediary.
      *
-     * async so state-bundle creates a dedicated `<workflow>.dispatch` transport. That per-message
+     * Async dispatch uses the explicitly configured `media.dispatch` transport. That per-message
      * boundary also removes the ceiling the batch path has: dispatching inline holds a Messenger
      * message unacked for the whole HTTP call, and RabbitMQ closes the channel at consumer_timeout
      * (30 minutes), which turns a large run into a redelivery loop rather than an error. Batching
      * belongs in the consumer (Symfony's BatchHandlerInterface keeps per-message ack/nack), not in
      * a command loop.
      */
-    #[Transition(
+    #[AsyncTransition(
         from: self::PLACE_NEW,
         to: self::PLACE_DISPATCHED,
         async: true,
-        info: 'publish to mediary',
+        transport: 'media.dispatch',
+        label: 'publish to mediary',
         description: 'POST this row to mediary and apply whatever it reports back',
     )]
     public const TRANSITION_DISPATCH = 'dispatch';
 
     /** Apply a terminal remote status — from the dispatch response, or later from the webhook. */
-    #[Transition(
-        from: [self::PLACE_DISPATCHED, self::PLACE_SYNCED],
-        to: self::PLACE_SYNCED,
-        info: 'apply remote status',
-        description: 'mediary reported a terminal place; the local row now reflects it',
-    )]
+    #[Transition(from: self::PLACE_DISPATCHED, to: self::PLACE_SYNCED, label: 'apply remote status', description: 'mediary reported a terminal place; the local row now reflects it')]
+    #[Transition(from: self::PLACE_SYNCED, to: self::PLACE_SYNCED, label: 'apply remote status', description: 'mediary reported a terminal place; the local row now reflects it')]
     public const TRANSITION_SYNC = 'sync';
 
     /** Give a dead dispatch somewhere to rest, so it is countable instead of only loggable. */
-    #[Transition(
-        from: [self::PLACE_NEW, self::PLACE_DISPATCHED],
-        to: self::PLACE_FAILED,
-        info: 'dispatch failed',
-        description: 'retries exhausted',
-    )]
+    #[Transition(from: self::PLACE_NEW, to: self::PLACE_FAILED, label: 'dispatch failed', description: 'retries exhausted')]
+    #[Transition(from: self::PLACE_DISPATCHED, to: self::PLACE_FAILED, label: 'dispatch failed', description: 'retries exhausted')]
     public const TRANSITION_FAIL = 'fail';
 }
