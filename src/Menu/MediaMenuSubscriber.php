@@ -8,8 +8,8 @@ use Survos\MediaBundle\Entity\Audio;
 use Survos\MediaBundle\Entity\Photo;
 use Survos\MediaBundle\Entity\Video;
 use Survos\MenuBundle\Attribute\AsMenuListener;
+use Survos\MenuBundle\Event\MenuEvent;
 use Survos\MenuBundle\MenuSlot;
-use Survos\TablerBundle\Event\MenuEvent;
 use Survos\TablerBundle\Menu\AbstractAdminMenuSubscriber;
 
 final class MediaMenuSubscriber extends AbstractAdminMenuSubscriber
