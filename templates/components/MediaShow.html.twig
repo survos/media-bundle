@@ -144,13 +144,7 @@
           {# Workflow — transition controls and pending-steps queue #}
           {% if workflowCode %}
           <div id="{{ tabId }}-workflow" class="tab-pane {{ activeTab == 'workflow' ? 'active show' : '' }}" role="tabpanel">
-            <twig:state:workflow-marking
-              :subject="this.entity"
-              globalKey="{{ globalKey }}"
-              workflowCode="{{ workflowCode }}"
-              redirectUrl="{{ app.request.uri }}"
-              layout="table"
-            />
+            <span class="badge bg-blue-lt">{{ this.entity.marking ?? 'new' }}</span>
           </div>
           {% endif %}
 
