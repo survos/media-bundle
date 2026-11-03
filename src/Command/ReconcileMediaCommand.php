@@ -204,7 +204,7 @@ final class ReconcileMediaCommand
             ->select('m.id')
             ->where('m.marking = :dispatched')
             ->setParameter('dispatched', MediaWorkflowDefinition::PLACE_DISPATCHED)
-            ->orderBy('m.id', 'ASC');
+            ->orderBy('m.id');
 
         if (!$all) {
             $qb->andWhere('m.status NOT IN (:terminal)')

@@ -53,7 +53,7 @@ final class MediaCommands
         $statusRows = $repo->createQueryBuilder('m')
             ->select('m.status AS status', 'COUNT(m.id) AS count')
             ->groupBy('m.status')
-            ->orderBy('count', 'DESC')
+            ->orderBy('count', \SortDirection::Descending)
             ->getQuery()
             ->getArrayResult();
 
