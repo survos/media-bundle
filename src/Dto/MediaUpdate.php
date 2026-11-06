@@ -6,7 +6,6 @@ namespace Survos\MediaBundle\Dto;
 
 use Survos\DataContracts\Util\MediaIdentity;
 use Survos\DataContracts\Util\MediaKeyService;
-use Survos\ImgproxyBundle\Dto\ImgproxyInfo;
 
 /**
  * One "something about this image changed" notification from mediary.
@@ -30,18 +29,16 @@ final class MediaUpdate
         /** @var array<string,mixed> ocr/sha256 — the non-/info remainder */
         public readonly array $context = [],
         /**
-         * imgproxy Pro's /info response, typed.
+         * The stored image-info blob, typed ({@see ImageInfo}).
          *
-         * Reusing ImgproxyBundle's DTO rather than re-modelling the shape here:
-         * this blob IS an imgproxy response, and a second copy of its structure
-         * would drift the first time imgproxy adds a field. That's why
-         * media-bundle now requires imgproxy-bundle outright instead of merely
-         * suggesting it.
+         * Its shape follows imgproxy Pro's /info, which existing rows hold, but the DTO is
+         * media-bundle's own: no image-server bundle is required to read it, and a producer
+         * with less to report (imagor's meta/) just yields a sparser ImageInfo.
          *
          * Carries dimensions, faces (objects), average colour, blurhash and
          * embedded exif/iptc/xmp — most of which nothing has ever synced.
          */
-        public readonly ?ImgproxyInfo $info = null,
+        public readonly ?ImageInfo $info = null,
     ) {
     }
 
@@ -159,9 +156,9 @@ final class MediaUpdate
     }
 
     /** mediary nests the blob under context.info; tolerate a top-level one too. */
-    private static function infoFrom(mixed $raw): ?ImgproxyInfo
+    private static function infoFrom(mixed $raw): ?ImageInfo
     {
-        return is_array($raw) && [] !== $raw ? ImgproxyInfo::fromArray($raw) : null;
+        return is_array($raw) && [] !== $raw ? ImageInfo::fromArray($raw) : null;
     }
 
     /**

@@ -20,7 +20,7 @@ use Survos\FieldBundle\Attribute\Field;
 use Survos\FieldBundle\Attribute\RouteIdentity;
 use Survos\FieldBundle\Entity\RouteIdentityTrait;
 use Survos\FieldBundle\Entity\RouteParametersInterface;
-use Survos\ImgproxyBundle\Dto\ImgproxyInfo;
+use Survos\MediaBundle\Dto\ImageInfo;
 use Survos\MediaBundle\Repository\MediaRepository;
 use Survos\MediaBundle\Trait\HasAiVisionTrait;
 use Survos\MediaBundle\Workflow\MediaWorkflowDefinition;
@@ -208,7 +208,7 @@ abstract class BaseMedia implements RouteParametersInterface, WorkflowSubjectInt
      */
     #[Groups(['media:read'])]
     public ?string $thumbHash {
-        get => ImgproxyInfo::thumbHashBase64($this->info['thumb_hash'] ?? null);
+        get => ImageInfo::thumbHashBase64($this->info['thumb_hash'] ?? null);
     }
 
     /** Average RGB of the image, from /info. Useful as a placeholder colour. */
