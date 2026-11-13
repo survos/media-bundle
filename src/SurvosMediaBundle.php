@@ -21,11 +21,6 @@ class SurvosMediaBundle extends AbstractSurvosBundle
 {
     use HasDoctrineEntities;
 
-    protected function doctrineAlias(): string
-    {
-        return 'Media';
-    }
-
     public function configure(DefinitionConfigurator $definition): void
     {
         // NOTE: HasConfigurableRoutes was mixed in solely to expose MediaCallbackController's
