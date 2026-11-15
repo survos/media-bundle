@@ -11,7 +11,7 @@
     "require": {
         "php": "^8.5",
         "doctrine/dbal": "^4.3.2",
-        "doctrine/doctrine-bundle": "^3.0",
+        "doctrine/doctrine-bundle": "^3.4",
         "league/flysystem": "^3.0",
         "survos/data-contracts": "^2.27.1",
         "survos/field-bundle": "^2.5",
